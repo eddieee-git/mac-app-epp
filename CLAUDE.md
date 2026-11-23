@@ -1,4 +1,5 @@
-> 문서·UI 규칙은 ../mac-app/STYLE.md를 따른다(말투 "~해요", 메뉴·설정 모양). 다르게 할 때는 여기에 이유를 적는다.
+> 문서·UI 규칙은 docs/STYLE.md(mac-app 공통 규칙 복사본)를 따른다(말투 "~해요", 메뉴·설정 모양). 다르게 할 때는 여기에 이유를 적는다.
+> 이 저장소만으로 작업을 이어갈 수 있다. 이 Mac 밖에 있어야 하는 것은 아래 "다른 Mac에서 이어서 하기".
 
 # Epp 개발 메모
 
@@ -13,7 +14,7 @@ Swift Package 하나로, Xcode 없이 Command Line Tools만으로 빌드한다. 
 
 ## 지켜야 할 것
 
-- **기존 단독 앱 저장소(../Clocky, ../Floaty, ../Grabby, ../Keepy, ../Peeky)는 건드리지 않는다.** 코드는 복사해 와서 고친다. 복사한 뒤로는 따로 간다.
+- **기존 단독 앱 저장소(../Clocky, ../Floaty, ../Grabby, ../Keepy, ../Peeky, 있으면)는 건드리지 않는다.** 코드는 이미 복사해 왔고 따로 간다. 아래 "원본: …"은 기록용이다.
 - **사용자의 실제 앱·데이터를 건드리지 않는다.** 시험은 디버그 빌드 `Epp Dev`(번들 ID `com.eddieee.Epp.dev`, 데이터 `~/Library/Application Support/Epp Dev/`)로 한다.
 - **기능은 처음에 모두 꺼져 있다.** 꺼진 기능은 객체를 만들지 않는다(타이머·단축키·창 없음).
 - 사용자 문구는 한국어로 쓰고 영어 번역을 함께 넣는다.
@@ -38,8 +39,8 @@ swift scripts/sign-update.swift public  # 업데이트 서명 키의 공개 키 
 
 ## 업데이트·릴리스
 
-- 업데이트 코드 `Sources/Epp/AppUpdater.swift`는 `../mac-app/shared/AppUpdater.swift` 복사본이다. 여기서 고치지 않는다.
-  원본이 바뀌면 다시 복사한다(`cp ../mac-app/shared/AppUpdater.swift Sources/Epp/`). Epp 값은 `UpdaterSetup.swift`에만.
+- 업데이트 코드 `Sources/Epp/AppUpdater.swift`는 `../mac-app/shared/AppUpdater.swift` 복사본이다(Gitty와 같이 쓰는 원본). 되도록 여기서 고치지 않는다.
+  mac-app이 있는 Mac에서 원본이 바뀌면 다시 복사한다(`cp ../mac-app/shared/AppUpdater.swift Sources/Epp/`). 없으면 여기 것이 기준. Epp 값은 `UpdaterSetup.swift`에만.
 - 하루 한 번 GitHub(`eddieee-git/mac-app-epp`) 최신 릴리스를 묻고, 기본은 Epp를 쓰지 않을 때 알아서 설치한다.
   설정 → 일반 → 업데이트, 메뉴의 "업데이트 확인…". **저장소가 비공개인 동안에는 릴리스를 찾지 못한다**(공개 API라서).
 - 디버그 빌드(Epp Dev)는 `-debugUpdateURL`을 줬을 때만 확인한다(`AppUpdater.shouldRun`).
@@ -50,6 +51,21 @@ swift scripts/sign-update.swift public  # 업데이트 서명 키의 공개 키 
   **읽어서 출력하거나 커밋하지 않는다. 잃어버리면 설치된 Epp가 새 버전을 자동으로 받지 못하니 따로 백업한다.**
 - 릴리스 순서: Info.plist 버전(+`CFBundleVersion`) 올리기 → `docs/releases/v<버전>.md` → 커밋·main push → `./scripts/release.sh`
   → `gh api repos/eddieee-git/mac-app-epp/releases/latest --jq '.tag_name, .assets[].digest'`가 `shasum -a 256 build/Epp-<버전>.dmg`와 같은지.
+
+## 다른 Mac에서 이어서 하기
+
+저장소만 있으면 빌드·시험·실행은 된다. 필요한 것: Apple 실리콘 Mac, macOS 14+, Command Line Tools(`xcode-select --install`).
+
+```bash
+git clone https://github.com/eddieee-git/mac-app-epp.git && cd mac-app-epp
+./scripts/test.sh && ./scripts/run.sh
+```
+
+**저장소에 넣지 않는 것(비밀)**: `~/.config/epp/` — 업데이트 서명 키(`update-signing.key`)와 코드 서명 인증서(`codesign.p12` + `.pass`).
+- 릴리스(`release.sh`)를 그 Mac에서 하려면 이 폴더를 안전하게(USB·암호 걸린 압축 등) 옮긴다. 읽어서 출력하거나 커밋하지 않는다.
+- 인증서 넣기: `security import ~/.config/epp/codesign.p12 -k ~/Library/Keychains/login.keychain-db -P "$(cat ~/.config/epp/codesign.p12.pass)" -T /usr/bin/codesign`
+  그다음 인증서 믿게 하기(사용자가 직접): `security find-certificate -c "Epp Local Signing" -p > /tmp/epp-cert.pem && security add-trusted-cert -r trustRoot -p codeSign -k ~/Library/Keychains/login.keychain-db /tmp/epp-cert.pem`
+- 인증서가 없으면 빌드는 임시 서명으로 된다(시험은 되지만, 그 빌드로 릴리스하면 설치된 Epp의 권한이 풀린다). **새 인증서를 만들지 않는다**(`make-signing-cert.sh`는 처음 한 번만).
 
 ## 구조
 
