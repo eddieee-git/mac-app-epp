@@ -9,7 +9,6 @@ final class AppSettings: ObservableObject {
         case fixed
     }
 
-    typealias Theme = EppTheme
 
     static let opacityRange = 0.3...1.0
     static let widthRange = 200.0...800.0
@@ -35,7 +34,6 @@ final class AppSettings: ObservableObject {
         static let timeOnlyToday = "timeOnlyToday"
         static let hotKeys = "hotKeys"
         static let renameTitleKey = "renameTitleKey"
-        static let theme = "theme"
         static let soundEffects = "soundEffects"
         static let alarmNotifications = "alarmNotifications"
         static let sounds = "sounds"
@@ -99,12 +97,6 @@ final class AppSettings: ObservableObject {
     /// 화면 언어. Epp 설정 → 일반 → 언어를 따른다(바꾸면 Epp를 다시 연다).
     /// 화면을 언어에 맞춰 다시 그리는 표시(.id)
     var language: String { EppLanguage.isKorean ? "ko" : "en" }
-    @Published var theme: Theme {
-        didSet {
-            defaults.set(theme.rawValue, forKey: Keys.theme)
-            FloatyTheme.apply(theme)
-        }
-    }
     /// 동작별 소리. 키는 `SoundEffect.rawValue`이고, 없는 동작은 기본 소리를 쓴다.
     @Published var sounds: [String: String] {
         didSet {
@@ -164,7 +156,6 @@ final class AppSettings: ObservableObject {
         timeOnlyToday = defaults.object(forKey: Keys.timeOnlyToday) as? Bool ?? true
         hotKeys = defaults.data(forKey: Keys.hotKeys).flatMap { try? JSONDecoder().decode([String: KeyCombo].self, from: $0) }.map(KeyCombo.migrated) ?? KeyCombo.defaults
         renameTitleKey = defaults.data(forKey: Keys.renameTitleKey).map { try? JSONDecoder().decode(KeyCombo.self, from: $0) } ?? KeyCombo.renameDefault
-        theme = defaults.string(forKey: Keys.theme).flatMap(Theme.init) ?? .system
         sounds = defaults.dictionary(forKey: Keys.sounds) as? [String: String] ?? [:]
         soundEffects = defaults.object(forKey: Keys.soundEffects) as? Bool ?? false
         alarmNotifications = defaults.object(forKey: Keys.alarmNotifications) as? Bool ?? true
@@ -236,15 +227,7 @@ final class AppSettings: ObservableObject {
 }
 
 /// 스티커 창에만 테마를 입힌다. Epp 전체(NSApp.appearance)를 바꾸면 다른 기능 화면까지 바뀌기 때문이다.
-/// 스티커 창(StickyPanel, 스티커 관리, 되돌리기 알림)의 테마. 창은 모두 메인 스레드에서 만든다.
+/// 스티커 창들을 알아보는 표시. 테마는 Epp 하나(설정 → 일반 → 테마)라 창마다 따로 넣지 않는다.
 enum FloatyTheme {
-    @MainActor static let windows = EppWindowTheme(owns: isFloatyWindow)
-    /// 새 스티커 창에 넣을 모양. nil이면 시스템을 따른다.
-    static var appearance: NSAppearance? { MainActor.assumeIsolated { windows.appearance } }
-    static func apply(_ theme: EppTheme) { MainActor.assumeIsolated { windows.apply(theme) } }
     static let managerWindowID = NSUserInterfaceItemIdentifier("floaty.manager")
-
-    static func isFloatyWindow(_ window: NSWindow) -> Bool {
-        window is StickyPanel || window.identifier == managerWindowID || window.identifier == UndoToast.windowID
-    }
 }

@@ -72,7 +72,26 @@ enum SelfTest {
                "기능 설정을 옮김")
         expect(SettingsBackup.decode(Data("아님".utf8)) == nil, "Epp 설정 파일이 아니면 읽지 않음")
 
-        var ok = failures == 0
+        print("[Epp] 알람 한곳")
+        let board = EppAlertBoard.shared
+        let alert = EppAlert(id: "test|a|1", title: "시험", date: Date(), source: "test")
+        board.publish([alert], from: "test")
+        expect(board.alerts.contains(alert) && board.isExternal(alert.id), "알람을 올림")
+        var received: (String, EppAlertBoard.Event)?
+        board.onEvent(from: "test") { received = ($0, $1) }
+        board.ringerDid(.dismissed, alertID: alert.id)
+        expect(received?.0 == alert.id, "울리는 쪽에서 끄면 알린 기능에 전함")
+        var dismissed: String?
+        board.setRinger { dismissed = $0 }
+        expect(board.hasRinger, "울리는 기능 등록")
+        board.sourceDismissed(alert.id)
+        expect(dismissed == alert.id, "알린 쪽에서 끄면 울리는 쪽에 전함")
+        board.setRinger(dismiss: nil)
+        board.publish([], from: "test")
+        board.onEvent(from: "test", nil)
+        expect(!board.hasRinger && !board.alerts.contains(alert), "기능을 끄면 정리")
+
+                var ok = failures == 0
         for type in ModuleList.all {
             print("[\(type.info.name)]")
             ok = type.runSelfTest() && ok

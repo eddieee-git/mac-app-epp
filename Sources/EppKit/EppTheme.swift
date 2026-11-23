@@ -1,7 +1,6 @@
 import AppKit
 
-/// 기능 창의 테마(스티커·캡처 설정의 "테마"). Epp 전체(`NSApp.appearance`)가 아니라 그 기능의 창에만 입힌다.
-/// 앱 전체를 바꾸면 설정 창 등 다른 기능 화면까지 바뀌기 때문이다.
+/// 라이트·다크·시스템.
 public enum EppTheme: String, CaseIterable, Sendable {
     case light, dark, system
 
@@ -23,19 +22,20 @@ public enum EppTheme: String, CaseIterable, Sendable {
     }
 }
 
-/// 한 기능의 창들에 테마를 입힌다. 새 창은 만들 때 `appearance`를 넣고, 테마를 바꾸면 `apply`가 열린 창을 모두 바꾼다.
+/// Epp 전체 테마(설정 → 일반 → 테마). 모든 Epp 창에 똑같이 입힌다(`NSApp.appearance`).
 @MainActor
-public final class EppWindowTheme {
-    public private(set) var appearance: NSAppearance?
-    private let owns: (NSWindow) -> Bool
+public enum EppAppTheme {
+    public static let key = "theme"
 
-    /// owns: 이 기능의 창인지
-    public init(owns: @escaping (NSWindow) -> Bool) {
-        self.owns = owns
+    public static var current: EppTheme {
+        get { UserDefaults.standard.string(forKey: key).flatMap(EppTheme.init) ?? .system }
+        set {
+            UserDefaults.standard.set(newValue.rawValue, forKey: key)
+            apply()
+        }
     }
 
-    public func apply(_ theme: EppTheme) {
-        appearance = theme.appearance
-        for window in NSApp.windows where owns(window) { window.appearance = appearance }
+    public static func apply() {
+        NSApp.appearance = current.appearance
     }
 }

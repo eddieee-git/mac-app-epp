@@ -507,7 +507,7 @@ final class ClockStore: ObservableObject {
 
     /// 일정이 울릴 때. 다시 울림을 걸어 두었으면 그때.
     func alertDate(of event: CalendarEvent) -> Date {
-        eventSnoozes[event.id] ?? event.start.addingTimeInterval(-calendarLead)
+        eventSnoozes[event.id] ?? event.start.addingTimeInterval(-lead(for: event))
     }
 
     /// 아직 울리지 않았고 건너뛰지도 않은 일정과 그 알림 시각, 이른 것부터.
@@ -516,7 +516,7 @@ final class ClockStore: ObservableObject {
             if skippedEventIDs.contains(event.id) { return nil }
             if let snooze = eventSnoozes[event.id] { return (event, snooze) }
             if firedEventIDs.contains(event.id) { return nil }
-            return (event, event.start.addingTimeInterval(-calendarLead))
+            return (event, event.start.addingTimeInterval(-lead(for: event)))
         }
         .sorted { $0.1 < $1.1 }
         .map { (event: $0.0, date: $0.1) }
@@ -541,8 +541,51 @@ final class ClockStore: ObservableObject {
             + calendarEvents.filter { ringingEventIDs.contains($0.id) }.map(\.title)
     }
 
+    // MARK: 다른 기능의 알람(스티커 등, EppAlertBoard)
+
+    /// 다른 기능이 올린 알람을 일정처럼 다룰 때 쓰는 표시(feedID). 미리 알림 시간 없이 그 시각에 울린다.
+    static let externalFeedID = UUID(uuidString: "00000000-0000-0000-0000-0000000E9A1A")!
+    private var feedEvents: [CalendarEvent] = []
+    private var externalEvents: [CalendarEvent] = []
+    /// 울리던 다른 기능의 알람을 끄거나(until nil) 다시 울림을 눌렀을 때(until) 알린다.
+    var onExternalStopped: (([String], Date?) -> Void)?
+
+    func isExternal(_ id: String) -> Bool { externalEvents.contains { $0.id == id } }
+
+    /// 미리 알림 시간: 캘린더 일정은 설정대로, 다른 기능의 알람은 그 시각에.
+    func lead(for event: CalendarEvent) -> TimeInterval {
+        event.feedID == Self.externalFeedID ? 0 : calendarLead
+    }
+
+    func setExternalEvents(_ events: [CalendarEvent]) {
+        guard events != externalEvents else { return }
+        externalEvents = events
+        mergeEvents()
+        scheduleTick()
+    }
+
+    /// 다른 기능에서 직접 껐다(스티커에서 확인). 울리고 있었으면 그것만 멈춘다.
+    func dismissExternal(_ id: String) {
+        firedEventIDs.insert(id)
+        eventSnoozes[id] = nil
+        guard ringingEventIDs.contains(id) else { return }
+        ringingEventIDs.remove(id)
+        if !isRinging { stopSound() }
+        now = Date()
+        scheduleTick()
+    }
+
+    private func mergeEvents() {
+        let merged = (feedEvents + externalEvents).sorted { $0.start < $1.start }
+        if merged != calendarEvents { calendarEvents = merged }
+    }
+
+    /// 울리고 있던 다른 기능의 알람(끄기·다시 울림 전에 부른다)
+    private var ringingExternalIDs: [String] { ringingEventIDs.filter(isExternal) }
+
     func setCalendarEvents(_ events: [CalendarEvent]) {
-        if events != calendarEvents { calendarEvents = events }
+        feedEvents = events
+        mergeEvents()
         // 오래된 기록은 지운다. 일정 id 끝에 시작 시각(초)이 있다.
         let cutoff = Date().addingTimeInterval(-3 * 86400).timeIntervalSince1970
         func recent(_ id: String) -> Bool { (id.split(separator: "|").last.flatMap { Double($0) } ?? 0) > cutoff }
@@ -798,11 +841,13 @@ final class ClockStore: ObservableObject {
         if timers.contains(where: { $0.phase == .ringing }) {
             timers = timers.map { var t = $0; if t.phase == .ringing { t.phase = .idle }; return t }
         }
+        let external = ringingExternalIDs
         ringingAlarmIDs = []
         ringingEventIDs = []
         stopSound()
         now = Date()
         scheduleTick()
+        if !external.isEmpty { onExternalStopped?(external, nil) }
     }
 
     /// 울리는 것을 모두 끄고 5분 뒤에 한 번 더 울린다. 타이머는 5분짜리로 다시 돈다.
@@ -823,7 +868,10 @@ final class ClockStore: ObservableObject {
                 return a
             }
         }
-        for id in ringingEventIDs { eventSnoozes[id] = until }
+        // 다른 기능의 알람은 그 기능이 다시 울릴 시각으로 새로 올린다(여기서 또 걸면 두 번 울린다).
+        let external = ringingExternalIDs
+        for id in ringingEventIDs where !external.contains(id) { eventSnoozes[id] = until }
+        if !external.isEmpty { onExternalStopped?(external, until) }
         ringingAlarmIDs = []
         ringingEventIDs = []
         stopSound()

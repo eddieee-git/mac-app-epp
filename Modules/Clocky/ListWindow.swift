@@ -3,13 +3,12 @@ import EppKit
 import Combine
 import SwiftUI
 
-/// 전체 목록 창. 왼쪽에 모든 타이머와 알람을, 오른쪽에 고른 항목의 편집기를 보여 준다.
+/// 타이머 목록 창. 왼쪽에 모든 타이머와 알람을, 오른쪽에 고른 항목의 편집기를 보여 준다.
 /// 시계 창은 크기가 고정이라 여기서 여러 개를 한꺼번에 살피고 고친다.
 final class ListWindowController: NSObject, NSWindowDelegate {
     let model: ClockListModel
     private let undoManager: UndoManager
     private var window: ListWindow?
-    private var levelObservers: [NSObjectProtocol] = []
 
     init(model: ClockListModel, undoManager: UndoManager) {
         self.model = model
@@ -20,25 +19,23 @@ final class ListWindowController: NSObject, NSWindowDelegate {
     var isVisible: Bool { window?.isVisible == true }
 
     /// 타이머 기능을 끌 때 닫는다.
-    func close() { window?.close() }
+    func close() {
+        window?.close()
+        window.map(EppWindows.forget)
+    }
     var windowNumber: Int { window?.windowNumber ?? 0 }
 
     func show() {
         if window == nil {
             let w = ListWindow(contentRect: NSRect(x: 0, y: 0, width: 780, height: 500),
                                styleMask: [.titled, .closable, .resizable, .miniaturizable], backing: .buffered, defer: false)
-            w.title = L("전체 목록")
-            w.isReleasedWhenClosed = false
-            w.minSize = NSSize(width: 640, height: 400)
-            levelObservers = floatWhileActive(w)
+            w.title = L("타이머 목록")
             w.delegate = self
             w.contentView = NSHostingView(rootView: ClockListView(model: model, store: model.store, settings: model.settings))
-            w.setFrameAutosaveName("ClockyList")
-            if !w.setFrameUsingName("ClockyList") { w.center() }
+            EppWindows.prepare(w, autosaveName: "TimerList", minSize: NSSize(width: 640, height: 400))
             window = w
         }
-        NSApp.activate(ignoringOtherApps: true)
-        window?.makeKeyAndOrderFront(nil)
+        EppWindows.show(window)
         model.store.isListDisplayed = true
     }
 

@@ -46,7 +46,6 @@ public final class GrabbyModule: NSObject, EppModule {
     private let lastDisplayKey = "lastCaptureDisplay"
 
     public func start() {
-        GrabbyTheme.apply(settings.theme)
         // 설정에서 단축키를 바꾸면 바로 다시 등록한다. 입력받는 동안에는 잠시 풀어 둔다.
         hotKeySubscription = settings.$hotKeys.combineLatest(settings.$isRecordingHotKey).sink { [weak self] combos, isRecording in
             self?.registerHotKeys(isRecording ? [:] : combos)
@@ -155,7 +154,7 @@ public final class GrabbyModule: NSObject, EppModule {
         timer.submenu = timerMenu
         menu.addItem(timer)
         menu.addItem(.separator())
-        menu.addItem(item(L("캡처 창 열기"), action: #selector(openLibrary)))
+        menu.addItem(item(L("캡처 보관함…"), action: #selector(openLibrary)))
         menu.addItem(item(L("띄운 캡처 모두 닫기"), action: #selector(closeAllPins)))
         updateHotKeyItems(settings.hotKeys)
     }
@@ -169,7 +168,7 @@ public final class GrabbyModule: NSObject, EppModule {
     /// 탭 창이 앞에 있을 때 쓰는 앱 메뉴: 파일(캡처 창 열기, 저장 ⌘S) · 윈도우(최소화 ⌘M, 확대/축소, 모두 앞으로).
     public func mainMenus() -> [EppMainMenu] {
         let file = NSMenu(title: L("파일"))
-        let captureItem = NSMenuItem(title: L("캡처 창 열기"), action: #selector(openLibrary), keyEquivalent: "")
+        let captureItem = NSMenuItem(title: L("캡처 보관함…"), action: #selector(openLibrary), keyEquivalent: "")
         captureItem.target = self
         file.addItem(captureItem)
         file.addItem(NSMenuItem(title: L("저장…"), action: #selector(NSDocument.save(_:)), keyEquivalent: "s"))

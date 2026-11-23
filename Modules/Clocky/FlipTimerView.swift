@@ -9,7 +9,7 @@ struct FlipTimerView: View {
     @ObservedObject var settings: ClockySettings
     /// 다시 울림 버튼의 자리를 창에 알린다. 창 왼쪽 위가 원점이다.
     var onSnoozeFrame: ((CGRect) -> Void)?
-    /// 목록 머리의 버튼으로 전체 목록 창과 설정 창을 연다.
+    /// 목록 머리의 버튼으로 타이머 목록 창과 설정 창을 연다.
     var onOpenList: (() -> Void)?
     var onOpenSettings: (() -> Void)?
     @Environment(\.colorScheme) private var colorScheme
@@ -329,8 +329,8 @@ struct FlipTimerView: View {
                 .buttonStyle(.borderless)
                 Button { onOpenList?() } label: { Image(systemName: "list.bullet") }
                     .buttonStyle(.borderless)
-                    .help(L("전체 목록 (⌘L)"))
-                    .accessibilityLabel(L("전체 목록"))
+                    .help(L("타이머 목록 (⌘L)"))
+                    .accessibilityLabel(L("타이머 목록"))
                 Button { onOpenSettings?() } label: { Image(systemName: "gearshape") }
                     .buttonStyle(.borderless)
                     .help(L("설정 (⌘,)"))

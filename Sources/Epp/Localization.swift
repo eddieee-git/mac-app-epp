@@ -43,6 +43,7 @@ enum Localization {
         ("단독 실행 중이라 이 기능만 켜져 있어요.", "Running on its own, so only this feature is on."),
         ("Epp에 오신 걸 환영해요", "Welcome to Epp"),
         ("빠른 검색…", "Quick Search…"),
+        ("테마", "Appearance"),
         ("설정 파일", "Settings File"),
         ("설정 옮기기", "Move Settings"),
         ("설정 내보내기", "Export Settings"),

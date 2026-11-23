@@ -132,7 +132,7 @@ Modules/<이름>/     기능 하나 (예: Modules/Keepy)
 원본: ../Floaty (커밋 62a4ae5). 바뀐 점:
 - `AppDelegate` → `FloatyModule`. 메뉴바 아이콘(압정 메모지)·⌥클릭 새 스티커·한 번만 실행(SingleInstance)은 뺐다. 메뉴는 Epp의 "스티커 ▸".
 - 앱 메뉴(파일 ⌘N·⌘D·⌘S·⌘P, 편집의 찾기·서식 없이 붙여넣기, 서식, 윈도우 ⌘\`)는 `mainMenus()`로 넘기고 본체가 합친다.
-- 테마는 `NSApp.appearance`가 아니라 스티커 창에만(`FloatyTheme` = EppKit `EppWindowTheme`: StickyPanel, 스티커 관리 창, 되돌리기 알림). 앱 전체를 바꾸면 다른 기능 화면까지 바뀐다.
+- 스티커 알람은 `EppAlertBoard`에 올린다. 타이머가 켜져 있으면 스티커는 앞으로 나와 깜빡이기만 하고 소리는 타이머가 낸다.
 - 언어는 Epp를 따른다(`Localization.language` = `EppLanguage`). 바로 바뀌던 언어 고르기는 뺐다.
 - `KeyCombo`·`HotKey`는 EppKit 것. `HotKey.swift`에는 `HotKeyAction`과 기본값(`KeyCombo.defaults`, `renameDefault`, `migrated`, `matches`)만.
   단축키 편집기는 원래 것(전역 6개 + 스티커 안 제목 변경, 겹침 확인, 입력하는 동안 등록 풀기)을 그대로 쓴다.
@@ -158,7 +158,7 @@ Modules/<이름>/     기능 하나 (예: Modules/Keepy)
 - `AppDelegate` → `GrabbyModule`. 메뉴바 아이콘·시작 안내 창(WelcomeWindow)·업데이트·한 번만 실행은 뺐다. 메뉴는 Epp의 "캡처 ▸".
 - `AppPresence`(창이 열리면 일반 앱으로 바꾸기)를 뺐다. Dock·앱 메뉴는 Epp의 "Dock에 아이콘 보이기"를 따른다.
 - 앱 메뉴(파일: 캡처 창 열기·저장 ⌘S, 윈도우: 최소화 ⌘M 등)는 `mainMenus()`.
-- 테마는 캡처 창(탭 창 `LibraryWindow`, 띄운 캡처 `PinWindow`)에만(`GrabbyTheme` = `EppWindowTheme`). 테마 종류는 EppKit `EppTheme`.
+- 알림 `Toast`는 `EppToast`를 부르는 얇은 껍데기. 탭 창 제목은 "캡처 보관함".
 - 저장은 `GrabbyStorage.defaults`·`folder`. 탭 보관함 `<Epp>/Grabby/Captures`, 띄운 캡처 `<Epp>/Grabby/Pins`.
   `AppSettings.shared`는 `AppSettings!`라 `let settings: AppSettings = AppSettings.shared`처럼 타입을 적는다.
 - 동작 기록(`EventLog`)은 따로 파일을 쓰지 않고 `EppLog.write("캡처", …)`(진단 로그를 켰을 때만).
@@ -200,6 +200,14 @@ Modules/<이름>/     기능 하나 (예: Modules/Keepy)
 - **기능 잇기**: `context.send(EppRequest)`로 다른 기능에 부탁하고 `handle(request:)`로 받는다(예: `.makeSticky(text:)` → 스티커).
   받을 기능이 꺼져 있으면 본체가 그 기능 설정(켜기 버튼)을 연다.
 - **설정 옮기기**: `SettingsBackup`이 본체·기능 UserDefaults를 `.eppsettings`(plist)로 내보내고 가져온다. `NS…`·업데이트 시각 같은 키는 뺀다.
+- **창**: 관리·목록 창(스티커 관리, 타이머 목록, 캡처 보관함, Epp 설정)은 `EppWindows.prepare(창, autosaveName:)`로 같은 모양·동작
+  (닫기·최소화·크기 조절, 지금 데스크톱에 열기, 자리 기억 `Epp.<이름>`, Epp를 쓰는 동안 스티커 위에 뜸). 열 때는 `EppWindows.show`.
+  창 제목과 여는 메뉴 이름을 같게: "<기능> <무엇>"(스티커 관리…, 타이머 목록…, 캡처 보관함…).
+- **테마**: Epp 하나(설정 → 일반 → 테마, `EppAppTheme` → `NSApp.appearance`). 기능마다 테마 설정·창별 appearance를 두지 않는다.
+- **짧은 알림**: `EppToast.show(글, symbol:/image:, action:, place:)` 하나만 쓴다(모양·위치·시간이 같게). 기능이 따로 토스트 창을 만들지 않는다.
+- **알람**: 울릴 시각이 있는 기능은 `EppAlertBoard.shared.publish`로 올린다. 타이머가 켜져 있으면 타이머가 타이머 알람과 똑같이 울리고
+  (`hasRinger`), 알린 기능은 자기 소리·알림을 내지 않는다. 끄기·다시 울림은 양쪽에 전해진다(`ringerDid`/`sourceDismissed`).
+  타이머가 꺼져 있으면 알린 기능이 스스로 울린다. 알람 id는 시각이 바뀌면 새로(`<기능>|<id>|<초>`).
 - **메뉴**: `fillMenu`에는 주 동작(열기) → 고유 항목만. 본체가 끝에 "시작 안내", "<이름> 설정…"을 붙인다.
 - **앱 메뉴**(화면 맨 위 왼쪽): 기능은 `mainMenus()`로 `EppMainMenu(.file/.edit/.format/.window, 메뉴)`만 넘긴다.
   본체가 Epp · 파일 · 편집 · 서식 · 윈도우 순서로 합치고, 같은 동작·같은 키는 한 번만 넣는다. `NSApp.mainMenu`를 직접 바꾸지 않는다.

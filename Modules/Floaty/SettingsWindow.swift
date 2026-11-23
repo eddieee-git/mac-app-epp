@@ -9,7 +9,7 @@ enum FloatySettings {
     @MainActor
     static func tabs(settings: AppSettings) -> [EppSettingsTab] {
         [
-            EppSettingsTab("general", L("일반"), keywords: [L("테마"), L("삭제하기 전에 확인"), L("휴지통")]) {
+            EppSettingsTab("general", L("일반"), keywords: [L("삭제하기 전에 확인"), L("휴지통")]) {
                 FloatySettingsView(settings: settings, tab: .general)
             },
             EppSettingsTab("stickies", L("스티커"), keywords: [
@@ -153,15 +153,6 @@ struct FloatySettingsView: View {
     /// 스티커 전체에 걸리는 설정. (언어·로그인 시 실행·업데이트는 Epp 일반 쪽에 있다)
     private var general: some View {
         Form {
-            Section {
-                Picker(L("테마"), selection: $settings.theme) {
-                    ForEach(AppSettings.Theme.allCases, id: \.self) { Text($0.title).tag($0) }
-                }
-                .pickerStyle(.segmented)
-            } footer: {
-                Text(L("스티커와 스티커 관리 창에만 적용돼요."))
-                    .font(.caption).foregroundStyle(.secondary)
-            }
             Section(L("휴지통")) {
                 Toggle(L("삭제하기 전에 확인"), isOn: $settings.confirmTrash)
                 Toggle(L("휴지통에서 %d일 지난 스티커 자동으로 지우기", NoteStore.trashRetentionDays), isOn: $settings.autoEmptyTrash)

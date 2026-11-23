@@ -46,13 +46,12 @@ final class SettingsWindowController {
             w.styleMask = [.titled, .closable, .fullSizeContentView]
             w.toolbarStyle = .unified
             w.title = L("Epp 설정")
-            w.isReleasedWhenClosed = false
             w.setContentSize(NSSize(width: SettingsView.size.width, height: SettingsView.size.height))
-            w.center()
+            EppWindows.prepare(w, autosaveName: "Settings", resizable: false)
+            w.styleMask.remove(.miniaturizable)
             window = w
         }
-        NSApp.activate(ignoringOtherApps: true)
-        window?.makeKeyAndOrderFront(nil)
+        EppWindows.show(window)
     }
 }
 
@@ -221,7 +220,7 @@ private struct GeneralPage: View {
     /// 설정 검색에서 이 쪽을 찾게 할 설정 이름들
     static var keywords: [String] {
         [L("기능"), L("권한"), EppPermission.accessibility.title, EppPermission.screenRecording.title,
-         L("빠른 검색"), L("빠른 검색 열기"), L("로그인 시 실행"), L("Dock에 아이콘 보이기"), L("언어"),
+         L("빠른 검색"), L("빠른 검색 열기"), L("로그인 시 실행"), L("Dock에 아이콘 보이기"), L("테마"), L("언어"),
          L("업데이트"), L("문제 해결"), L("진단 로그 남기기"), L("데이터 폴더"), L("설정 옮기기"), L("설정 내보내기…"), L("설정 가져오기…"), L("정보")]
     }
 
@@ -233,6 +232,7 @@ private struct GeneralPage: View {
 
     @State private var launchAtLogin = SMAppService.mainApp.status == .enabled
     @State private var showInDock = DockIcon.isOn
+    @State private var theme = EppAppTheme.current
     /// "system" | "ko" | "en". 문구는 시작할 때 한 번 정해지므로 바꾸면 다시 열어야 한다.
     @State private var language = UserDefaults.standard.string(forKey: EppLanguage.key) ?? "system"
     private let launchLanguage = UserDefaults.standard.string(forKey: EppLanguage.key) ?? "system"
@@ -303,6 +303,9 @@ private struct GeneralPage: View {
                     Text(L("켜면 Dock에 Epp가 보이고, 메뉴 막대 왼쪽에 Epp 메뉴가 나와요. 메뉴 막대 아이콘은 그대로 있어요."))
                         .font(.caption).foregroundStyle(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
+                }
+                Picker(L("테마"), selection: Binding(get: { theme }, set: { theme = $0; EppAppTheme.current = $0 })) {
+                    ForEach(EppTheme.allCases, id: \.self) { Text($0.title).tag($0) }
                 }
                 Picker(L("언어"), selection: $language) {
                     Text(L("시스템 설정 따르기")).tag("system")

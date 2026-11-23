@@ -20,19 +20,6 @@ enum ClockySettingsTabs {
     }
 }
 
-/// 앱을 쓰는 동안에는 항상 위 시계 창에 가려지지 않게 띄우고, 다른 앱으로 가면 보통 창처럼 그 앱 뒤로 보낸다.
-func floatWhileActive(_ window: NSWindow) -> [NSObjectProtocol] {
-    window.level = NSApp.isActive ? .floating : .normal
-    let center = NotificationCenter.default
-    return [
-        center.addObserver(forName: NSApplication.didBecomeActiveNotification, object: nil, queue: .main) { [weak window] _ in
-            window?.level = .floating
-        },
-        center.addObserver(forName: NSApplication.didResignActiveNotification, object: nil, queue: .main) { [weak window] _ in
-            window?.level = .normal
-        },
-    ]
-}
 
 struct SettingsView: View {
     enum Tab: String, CaseIterable {
@@ -198,7 +185,7 @@ struct SettingsView: View {
                 shortcut("S", "울리는 동안 다시 울림")
             }
             Section(L("타이머 창")) {
-                shortcut("⌘L", "전체 목록")
+                shortcut("⌘L", "타이머 목록")
             }
         }
         .formStyle(.grouped)

@@ -12,7 +12,6 @@ final class AppSettings: ObservableObject {
     private let hotKeysKey = "hotKeys"
     private let knownActionsKey = "knownHotKeyActions"
 
-    typealias Theme = EppTheme
 
     /// 화이트보드 바탕.
     enum BoardStyle: String, CaseIterable {
@@ -58,13 +57,6 @@ final class AppSettings: ObservableObject {
     /// 화면 언어. Epp 설정 → 일반 → 언어를 따른다(바꾸면 Epp를 다시 연다).
     /// 화면을 언어에 맞춰 다시 그리는 표시(.id)
     var language: String { EppLanguage.isKorean ? "ko" : "en" }
-    /// 캡처 창(탭 창, 띄운 캡처)에만 쓰는 테마. Epp 다른 화면은 시스템을 따른다.
-    @Published var theme: Theme {
-        didSet {
-            defaults.set(theme.rawValue, forKey: "theme")
-            GrabbyTheme.apply(theme)
-        }
-    }
     @Published var confirmDelete: Bool { didSet { defaults.set(!confirmDelete, forKey: "skipDeleteConfirmation") } }
 
     /// 저장 창이 처음 여는 폴더이자, 바로 저장할 때 쓰는 폴더.
@@ -204,7 +196,6 @@ final class AppSettings: ObservableObject {
         defaults.set(try? JSONEncoder().encode(saved), forKey: hotKeysKey)
         defaults.set(Array(known), forKey: knownActionsKey)
 
-        theme = defaults.string(forKey: "theme").flatMap(Theme.init) ?? .system
         confirmDelete = !defaults.bool(forKey: "skipDeleteConfirmation")
         // 예전 버전은 마지막으로 저장한 폴더를 기억했다. 있으면 기본 폴더로 이어받는다.
         let folder = defaults.string(forKey: "saveFolder") ?? defaults.string(forKey: "lastSaveFolder")
@@ -244,13 +235,6 @@ final class AppSettings: ObservableObject {
 }
 
 /// 캡처 창(탭 창, 띄운 캡처)에만 테마를 입힌다. Epp 전체(NSApp.appearance)를 바꾸면 다른 기능 화면까지 바뀐다.
-/// 캡처 창(탭 창, 띄운 캡처)의 테마. 창은 모두 메인 스레드에서 만든다.
-enum GrabbyTheme {
-    @MainActor static let windows = EppWindowTheme { $0 is LibraryWindow || $0 is PinWindow }
-    /// 새 캡처 창에 넣을 모양. nil이면 시스템을 따른다.
-    static var appearance: NSAppearance? { MainActor.assumeIsolated { windows.appearance } }
-    static func apply(_ theme: EppTheme) { MainActor.assumeIsolated { windows.apply(theme) } }
-}
 
 /// Epp 설정 창에서 캡처를 골랐을 때의 탭: 일반 · 편집 · 저장 · 단축키.
 /// 틀(머리·시작하기·탭·검색)은 Epp 본체가 그린다. 언어, 로그인 시 실행, 업데이트, 정보는 Epp 일반 쪽에 있다.
@@ -259,7 +243,7 @@ enum GrabbySettings {
     static func tabs(settings: AppSettings) -> [EppSettingsTab] {
         [
             EppSettingsTab("general", L("일반"), keywords: [
-                L("테마"), L("탭을 삭제하기 전에 확인"), L("보관할 캡처 수"), L("오래된 캡처 지우기"), L("캡처할 때 소리"),
+                L("탭을 삭제하기 전에 확인"), L("보관할 캡처 수"), L("오래된 캡처 지우기"), L("캡처할 때 소리"),
                 L("Esc로 닫아도 탭에 남기기"), L("캡처하면 탭 창 띄우기"), L("다시 켤 때 띄워 둔 캡처 되살리기"),
                 L("QR 코드가 링크면 바로 브라우저로 열기"), L("타이머 캡처 시간"),
             ]) { SettingsView(settings: settings, tab: .general) },
@@ -304,12 +288,6 @@ struct SettingsView: View {
     private var general: some View {
         Form {
             Section {
-                Picker(L("테마"), selection: $settings.theme) {
-                    ForEach(AppSettings.Theme.allCases, id: \.self) { Text($0.title).tag($0) }
-                }
-                .pickerStyle(.segmented)
-                // 분할 버튼은 글자가 바뀌어도 다시 그리지 않아서, 언어를 바꾸면 새로 만든다.
-                .id("segment2-\(settings.language)")
                 Toggle(L("탭을 삭제하기 전에 확인"), isOn: $settings.confirmDelete)
                 Picker(L("보관할 캡처 수"), selection: $settings.keepCount) {
                     ForEach(AppSettings.keepCountOptions, id: \.self) { count in

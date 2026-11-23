@@ -74,6 +74,22 @@ public final class ClockyModule: NSObject, EppModule, NSMenuDelegate {
             .sink { [weak self] in DispatchQueue.main.async { self?.updateStatusTitle() } }
             .store(in: &subscriptions)
 
+        // 다른 기능(스티커)의 알람도 타이머 알람과 똑같이 울린다(EppAlertBoard).
+        let board = EppAlertBoard.shared
+        let store = window.store
+        board.setRinger { [weak store] id in store?.dismissExternal(id) }
+        board.$alerts
+            .sink { [weak store] alerts in
+                store?.setExternalEvents(alerts.map {
+                    CalendarEvent(id: $0.id, title: $0.title, start: $0.date, end: $0.date.addingTimeInterval(60),
+                                  calendarName: L("스티커"), feedID: ClockStore.externalFeedID)
+                })
+            }
+            .store(in: &subscriptions)
+        store.onExternalStopped = { ids, until in
+            for id in ids { board.ringerDid(until.map { .snoozed(until: $0) } ?? .dismissed, alertID: id) }
+        }
+
         // 꺼져 있는 동안 놓친 것이 있으면 창에서 알린다.
         if !window.store.missedAlerts.isEmpty { window.show(takeFocus: false) }
 
@@ -93,6 +109,9 @@ public final class ClockyModule: NSObject, EppModule, NSMenuDelegate {
         if listWindowLoaded { listWindow.close() }
         removeStatusItem()
         context.setStatusText(nil)
+        EppAlertBoard.shared.setRinger(dismiss: nil)
+        window.store.onExternalStopped = nil
+        window.store.setExternalEvents([])
         sleepGuard.update(needsAwake: false)
     }
 
@@ -171,7 +190,7 @@ public final class ClockyModule: NSObject, EppModule, NSMenuDelegate {
 
     // MARK: Epp 메뉴의 "타이머 ▸"
 
-    /// 시계 창 열기, 도는·멈춘 타이머와 켜 둔 알람(누르면 그 항목을 창에 띄움), 전체 목록.
+    /// 시계 창 열기, 도는·멈춘 타이머와 켜 둔 알람(누르면 그 항목을 창에 띄움), 타이머 목록.
     public func fillMenu(_ menu: NSMenu) {
         menu.addItem(withTitle: L("시계 창 열기"), action: #selector(showWindow), keyEquivalent: "").target = self
         let lines = statusLines()
@@ -182,7 +201,7 @@ public final class ClockyModule: NSObject, EppModule, NSMenuDelegate {
             item.representedObject = line.1
         }
         menu.addItem(.separator())
-        menu.addItem(withTitle: L("전체 목록…"), action: #selector(showList), keyEquivalent: "").target = self
+        menu.addItem(withTitle: L("타이머 목록…"), action: #selector(showList), keyEquivalent: "").target = self
     }
 
     private func statusLines() -> [(String, String)] {
@@ -218,10 +237,10 @@ public final class ClockyModule: NSObject, EppModule, NSMenuDelegate {
         return lines
     }
 
-    /// 앱 메뉴 "윈도우"에 전체 목록(⌘L). 시계 창·목록 창에서 쓰던 키.
+    /// 앱 메뉴 "윈도우"에 타이머 목록(⌘L). 시계 창·목록 창에서 쓰던 키.
     public func mainMenus() -> [EppMainMenu] {
         let window = NSMenu(title: L("윈도우"))
-        window.addItem(withTitle: L("전체 목록…"), action: #selector(showList), keyEquivalent: "l").target = self
+        window.addItem(withTitle: L("타이머 목록…"), action: #selector(showList), keyEquivalent: "l").target = self
         return [EppMainMenu(.window, window)]
     }
 
@@ -302,7 +321,7 @@ public final class ClockyModule: NSObject, EppModule, NSMenuDelegate {
         reveal(id)
     }
 
-    /// epp://clocky/show — 시계 창, epp://clocky/list — 전체 목록, epp://clocky/toggle — 고른 타이머 시작/일시정지
+    /// epp://clocky/show — 시계 창, epp://clocky/list — 타이머 목록, epp://clocky/toggle — 고른 타이머 시작/일시정지
     /// 빠른 검색: 타이머·알람 이름에서 찾는다. 고르면 시계 창에서 그 항목을 고른다.
     public func search(_ query: EppSearchQuery) -> [EppSearchResult] {
         let store = window.store

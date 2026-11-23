@@ -76,6 +76,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, UNUser
         statusItem.button?.image = image
         statusItem.button?.toolTip = solo.map { "\($0.name) (Epp)" } ?? "Epp"
 
+        EppAppTheme.apply()
         manager.startEnabled()
         if manager.soloID == nil {
             quickSearch.registerHotKey()

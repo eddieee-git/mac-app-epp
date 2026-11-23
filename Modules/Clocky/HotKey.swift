@@ -11,7 +11,7 @@ enum HotKeyAction: String, CaseIterable {
         case .toggleClock: return L("시계 창 보이기/숨기기")
         case .toggleTimer: return L("고른 타이머 시작/일시정지")
         case .stopRinging: return L("울림 끄기")
-        case .showList: return L("전체 목록 열기")
+        case .showList: return L("타이머 목록 열기")
         }
     }
 }

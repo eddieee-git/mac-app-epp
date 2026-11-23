@@ -13,7 +13,10 @@ final class NoteManagerWindowController: NSObject, NSWindowDelegate {
         super.init()
     }
 
-    func close() { window?.close() }
+    func close() {
+        window?.close()
+        window.map(EppWindows.forget)
+    }
 
     func show(focusSearch: Bool = false) {
         if window == nil {
@@ -25,18 +28,13 @@ final class NoteManagerWindowController: NSObject, NSWindowDelegate {
             )
             w.title = L("스티커 관리")
             w.identifier = FloatyTheme.managerWindowID
-            w.appearance = FloatyTheme.appearance
-            w.isReleasedWhenClosed = false
-            w.minSize = NSSize(width: 640, height: 380)
-            // 항상 위 스티커에 가려지지 않게 한다.
-            w.level = .floating
             w.delegate = self
             w.contentView = NSHostingView(rootView: NoteManagerView(model: model))
-            w.center()
+            // 항상 위 스티커에 가려지지 않게 Epp를 쓰는 동안 떠 있다.
+            EppWindows.prepare(w, autosaveName: "StickyManager", minSize: NSSize(width: 640, height: 380))
             window = w
         }
-        NSApp.activate(ignoringOtherApps: true)
-        window?.makeKeyAndOrderFront(nil)
+        EppWindows.show(window)
         if focusSearch { model.searchFocusRequest += 1 }
     }
 

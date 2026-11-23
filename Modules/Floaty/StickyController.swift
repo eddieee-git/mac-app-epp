@@ -89,7 +89,6 @@ final class StickyController: NSObject, ObservableObject, NSWindowDelegate, NSTe
         self.onDelete = onDelete
         self.onDuplicate = onDuplicate
         panel = StickyPanel(contentRect: note.frame)
-        panel.appearance = FloatyTheme.appearance
         textView = FormattingTextView(usingTextLayoutManager: false)
         super.init()
 
@@ -273,6 +272,8 @@ final class StickyController: NSObject, ObservableObject, NSWindowDelegate, NSTe
         isAlarmRinging = true
         show()
         note.isCollapsed = false
+        // 타이머 기능이 켜져 있으면 타이머가 타이머 알람과 똑같이 울린다(소리·⌃⌥X·다시 울림). 스티커는 앞으로 나와 깜빡이기만.
+        guard !MainActor.assumeIsolated({ EppAlertBoard.shared.hasRinger }) else { return }
         playAlarmSound()
         if settings.alarmNotifications {
             // 잠긴 스티커는 본문 첫 줄이 드러나지 않게 제목이나 "(잠긴 스티커)"만 쓴다.
@@ -290,22 +291,37 @@ final class StickyController: NSObject, ObservableObject, NSWindowDelegate, NSTe
     }
 
     /// 울린 알람을 확인한다. 매일 알람은 다음 날 같은 시각으로 넘어가고, 한 번만 울리는 알람은 사라진다.
-    func dismissAlarm() {
+    func dismissAlarm(fromRinger: Bool = false) {
+        if !fromRinger { tellRingerStopped() }
         isAlarmRinging = false
         note.alarmDate = note.nextDailyAlarm(after: Date())
     }
 
     /// 알람을 아예 없앤다(매일 반복도 끈다).
     func removeAlarm() {
+        tellRingerStopped()
         isAlarmRinging = false
         note.alarmDate = nil
         note.alarmDailyMinutes = nil
     }
 
     /// 5분 뒤에 다시 울린다. 매일 알람이면 그다음에는 원래 시각으로 돌아간다.
-    func snoozeAlarm() {
+    func snoozeAlarm(until: Date? = nil) {
+        if until == nil { tellRingerStopped() }
         isAlarmRinging = false
-        note.alarmDate = Date().addingTimeInterval(TimeInterval(Self.snoozeMinutes * 60))
+        note.alarmDate = until ?? Date().addingTimeInterval(TimeInterval(Self.snoozeMinutes * 60))
+    }
+
+    /// 타이머가 이 알람을 울리고 있으면 멈추게 한다(스티커 쪽에서 끈 경우).
+    private func tellRingerStopped() {
+        guard let date = note.alarmDate else { return }
+        let id = Self.alertID(note.id, date)
+        MainActor.assumeIsolated { EppAlertBoard.shared.sourceDismissed(id) }
+    }
+
+    /// Epp 알람 한곳(EppAlertBoard)에 올리는 id. 시각이 바뀌면 새 알람이다.
+    static func alertID(_ id: UUID, _ date: Date) -> String {
+        "floaty|\(id.uuidString)|\(Int(date.timeIntervalSince1970))"
     }
 
     /// 한 번만 울리는 알람을 건다. 울리던 알람은 멈춘다.

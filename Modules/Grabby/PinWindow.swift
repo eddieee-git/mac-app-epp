@@ -28,7 +28,6 @@ final class PinWindow: NSPanel {
     /// `frame`은 전역 좌표(왼쪽 아래 원점). 캡처한 자리에 그대로 띄우면 화면에 붙어 있는 것처럼 보인다.
     static func show(_ image: CGImage, scale: CGFloat, at frame: CGRect) {
         let pin = PinWindow(id: UUID(), image: image, scale: scale, frame: frame)
-        pin.appearance = GrabbyTheme.appearance
         open.append(pin)
         pin.orderFrontRegardless()
         try? FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
@@ -63,7 +62,6 @@ final class PinWindow: NSPanel {
                 frame.origin = CGPoint(x: screen.visibleFrame.midX - frame.width / 2, y: screen.visibleFrame.midY - frame.height / 2)
             }
             let pin = PinWindow(id: entry.id, image: image, scale: entry.scale, frame: frame)
-            pin.appearance = GrabbyTheme.appearance
             pin.zoom = entry.zoom
             pin.alphaValue = entry.alpha
             open.append(pin)

@@ -61,6 +61,7 @@ public final class FloatyModule: NSObject, EppModule, NSMenuDelegate {
     }
     private var alarmTimer: Timer?
     private var alarmSubscription: AnyCancellable?
+    private var alertSubscription: AnyCancellable?
 
     /// 잠자기나 시계 변경에도 놓치지 않도록 시각마다 예약하지 않고 주기적으로 확인한다.
     /// 앱이 꺼져 있는 동안 지난 알람은 시작 직후 울린다. 울리는 스티커의 깜빡임도 이 주기를 따른다.
@@ -81,7 +82,6 @@ public final class FloatyModule: NSObject, EppModule, NSMenuDelegate {
 
     public func start() {
         isRunning = true
-        FloatyTheme.apply(settings.theme)
         // 설정 창의 슬라이더나 메뉴의 단계 선택은 "새 스티커에만 적용"이 꺼져 있을 때 스티커별 값을 덮어 모두 같게 맞춘다.
         // 시작할 때 들어오는 현재 값은 건너뛰어야 스티커별 값이 유지된다.
         opacitySubscription = settings.$opacity.dropFirst().sink { [weak self] value in
@@ -103,6 +103,27 @@ public final class FloatyModule: NSObject, EppModule, NSMenuDelegate {
             .removeDuplicates()
             .receive(on: DispatchQueue.main)
             .sink { [weak self] needed in self?.setAlarmTimer(running: needed) }
+        // 걸린 알람을 Epp 알람 한곳에 올린다. 타이머 기능이 켜져 있으면 타이머가 같은 방식으로 울린다.
+        alertSubscription = store.$notes
+            .map { notes in
+                notes.filter { !$0.isTrashed }.compactMap { note -> EppAlert? in
+                    guard let date = note.alarmDate else { return nil }
+                    return EppAlert(id: StickyController.alertID(note.id, date), title: "📝 " + note.displayTitle,
+                                    date: date, source: "floaty")
+                }
+            }
+            .removeDuplicates()
+            .receive(on: DispatchQueue.main)
+            .sink { alerts in MainActor.assumeIsolated { EppAlertBoard.shared.publish(alerts, from: "floaty") } }
+        EppAlertBoard.shared.onEvent(from: "floaty") { [weak self] alertID, event in
+            let parts = alertID.split(separator: "|")
+            guard let self, parts.count == 3, let id = UUID(uuidString: String(parts[1])),
+                  let controller = self.controller(id) else { return }
+            switch event {
+            case .dismissed: controller.dismissAlarm(fromRinger: true)
+            case .snoozed(let until): controller.snoozeAlarm(until: until)
+            }
+        }
         hotKeySubscription = settings.$hotKeys.combineLatest(settings.$isRecordingHotKey).sink { [weak self] combos, isRecording in
             self?.registerHotKeys(isRecording ? [:] : combos)
             self?.updateHotKeyItems(combos)
@@ -187,7 +208,10 @@ public final class FloatyModule: NSObject, EppModule, NSMenuDelegate {
         setAlarmTimer(running: false)
         purgeTimer?.invalidate()
         purgeTimer = nil
-        [hotKeySubscription, hidingAllSubscription, opacitySubscription, alarmSubscription, autoEmptySubscription].forEach { $0?.cancel() }
+        [hotKeySubscription, hidingAllSubscription, opacitySubscription, alarmSubscription, autoEmptySubscription, alertSubscription]
+            .forEach { $0?.cancel() }
+        EppAlertBoard.shared.publish([], from: "floaty")
+        EppAlertBoard.shared.onEvent(from: "floaty", nil)
         observers.forEach { $0.0.removeObserver($0.1) }
         observers.removeAll()
         if let eventMonitor { NSEvent.removeMonitor(eventMonitor) }

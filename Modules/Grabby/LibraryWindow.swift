@@ -36,14 +36,10 @@ final class LibraryWindowController: NSWindowController, NSWindowDelegate {
     init() {
         let window = LibraryWindow(contentRect: NSRect(x: 0, y: 0, width: 900, height: 640),
                                    styleMask: [.titled, .closable, .miniaturizable, .resizable], backing: .buffered, defer: false)
-        window.title = L("캡처")
-        window.appearance = GrabbyTheme.appearance
-        window.minSize = NSSize(width: 640, height: 420)
-        window.isReleasedWhenClosed = false
-        window.collectionBehavior = [.moveToActiveSpace, .fullScreenAuxiliary]
+        window.title = L("캡처 보관함")
         super.init(window: window)
-        if !window.setFrameUsingName("CaptureTabs") { window.center() }
-        window.setFrameAutosaveName("CaptureTabs")
+        // "항상 위" 핀을 따로 두므로 Epp를 쓰는 동안 떠 있는 것은 핀이 꺼져 있을 때만(setPinned).
+        EppWindows.prepare(window, autosaveName: "CaptureLibrary", minSize: NSSize(width: 640, height: 420), floatsWhileActive: false)
         window.delegate = self
         window.library = self
         build()
@@ -429,7 +425,14 @@ final class LibraryWindowController: NSWindowController, NSWindowDelegate {
     func setPinned(_ pinned: Bool) {
         pinButton.state = pinned ? .on : .off
         pinButton.contentTintColor = pinned ? .controlAccentColor : nil
-        window?.level = pinned ? .floating : .normal
+        if let window {
+            if pinned {
+                EppWindows.forget(window)
+                window.level = .floating
+            } else {
+                EppWindows.floatWhileActive(window)
+            }
+        }
         GrabbyStorage.defaults.set(pinned, forKey: pinKey)
     }
 
