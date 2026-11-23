@@ -66,6 +66,8 @@ Modules/<이름>/     기능 하나 (예: Modules/Keepy)
 
 ## 규칙과 함정
 
+- **설정 Form에는 `.scrollContentBackground(.hidden)`**. Form이 그리는 배경은 바탕화면 색이 묻어나 남색으로 보인다(시스템 설정은 회색). `EppSettingsPage`가 기능 탭에 붙여 준다.
+- **긴 글에 `.fixedSize(horizontal: false, vertical: true)`를 GroupBox 안에서 쓰지 않는다.** 폭 없이 재져 한 글자씩 줄이 바뀌고 창 전체가 밀렸다.
 - **SwiftUI `ForEach`에 기능 타입 목록(`[any EppModule.Type]`)을 바로 넣으면 컴파일러가 죽는다.** `ModuleList.infos`(값 목록)를 쓴다.
 - 기능의 `@AppStorage` 키는 본체 UserDefaults에 저장되므로 `<id>.` 접두어를 붙인다(예: `keepy.settingsTab`).
 - 손쉬운 사용·화면 기록 권한은 Epp 하나에 주어진다. 기존 단독 앱 권한과는 별개다.

@@ -42,7 +42,9 @@ final class SettingsWindowController {
         if window == nil {
             let controller = NSHostingController(rootView: SettingsView(manager: manager, router: router))
             let w = EscClosableWindow(contentViewController: controller)
-            w.styleMask = [.titled, .closable]
+            // 시스템 설정과 같은 창 모양: 왼쪽 목록이 제목 막대까지 올라가고, 오른쪽 위에 고른 쪽 이름이 나온다.
+            w.styleMask = [.titled, .closable, .fullSizeContentView]
+            w.toolbarStyle = .unified
             w.title = L("Epp 설정")
             w.isReleasedWhenClosed = false
             w.setContentSize(NSSize(width: SettingsView.size.width, height: SettingsView.size.height))
@@ -64,39 +66,30 @@ private struct SettingsView: View {
 
     var body: some View {
         NavigationSplitView {
-            // 검색창은 직접 둔다. `.searchable`은 창에 도구 막대를 더해서 창 전체가 위로 밀려 보였다.
-            VStack(spacing: 0) {
-                searchField
+            Group {
                 if query.trimmingCharacters(in: .whitespaces).isEmpty {
                     pageList
                 } else {
                     resultList
                 }
             }
-            .navigationSplitViewColumnWidth(190)
+            .navigationSplitViewColumnWidth(200)
             .toolbar(removing: .sidebarToggle)
         } detail: {
             detail
+                .navigationTitle(pageTitle)
+                // 시스템 설정처럼 불투명한 기본 창 배경. 비치는 배경은 바탕화면 색(남색 등)이 묻어난다.
+                .background(Color(nsColor: .windowBackgroundColor))
         }
+        // 시스템 설정과 같은 자리(왼쪽 목록 위)의 검색창
+        .searchable(text: $query, placement: .sidebar, prompt: L("설정 검색"))
         .frame(width: Self.size.width, height: Self.size.height)
     }
 
-    private var searchField: some View {
-        HStack(spacing: 6) {
-            Image(systemName: "magnifyingglass").foregroundStyle(.secondary).accessibilityHidden(true)
-            TextField(L("설정 검색"), text: $query).textFieldStyle(.plain)
-            if !query.isEmpty {
-                Button { query = "" } label: { Image(systemName: "xmark.circle.fill") }
-                    .buttonStyle(.borderless).foregroundStyle(.secondary)
-                    .accessibilityLabel(L("검색어 지우기"))
-            }
-        }
-        .padding(.horizontal, 8)
-        .padding(.vertical, 5)
-        .background(.quaternary, in: RoundedRectangle(cornerRadius: 7))
-        .padding(.horizontal, 10)
-        .padding(.top, 8)
-        .padding(.bottom, 4)
+    /// 오른쪽 위 제목: 고른 쪽 이름
+    private var pageTitle: String {
+        if router.page == SettingsRouter.general { return L("일반") }
+        return ModuleList.infos.first { $0.id == router.page }?.name ?? L("Epp 설정")
     }
 
     private var pageList: some View {
@@ -326,6 +319,7 @@ private struct GeneralPage: View {
             }
         }
         .formStyle(.grouped)
+        .scrollContentBackground(.hidden)
         .onAppear { permissions.refresh() }
         .onReceive(poll) { _ in permissions.refresh() }
     }

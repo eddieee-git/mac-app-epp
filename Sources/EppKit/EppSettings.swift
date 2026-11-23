@@ -98,6 +98,8 @@ public struct EppSettingsPage: View {
                 .overlay(alignment: .top) {
                     (tabs.first { $0.id == selected } ?? tabs.first)?.content
                         .formStyle(.grouped)
+                        // Form이 따로 그리는 배경은 바탕화면 색이 묻어나 남색으로 보인다. 숨기고 창 기본 배경을 쓴다.
+                        .scrollContentBackground(.hidden)
                 }
                 .clipped()
         }
