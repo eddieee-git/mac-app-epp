@@ -34,11 +34,15 @@ public struct EppSettingsPage: View {
     let info: EppModuleInfo
     let tabs: [EppSettingsTab]
     let gettingStarted: AnyView?
+    /// 이 기능의 전역 단축키가 켠 다른 기능과 겹칠 때의 알림 문구. 단축키 탭(id "shortcuts") 위에 보인다.
+    let shortcutClashes: () -> [String]
     @AppStorage private var selected: String
     @AppStorage private var gettingStartedHidden: Bool
 
-    public init(info: EppModuleInfo, tabs: [EppSettingsTab], gettingStarted: AnyView?) {
+    public init(info: EppModuleInfo, tabs: [EppSettingsTab], gettingStarted: AnyView?,
+                shortcutClashes: @escaping () -> [String] = { [] }) {
         self.info = info
+        self.shortcutClashes = shortcutClashes
         self.tabs = tabs
         self.gettingStarted = gettingStarted
         _selected = AppStorage(wrappedValue: tabs.first?.id ?? "", EppSettingsKeys.tab(info.id))
@@ -90,6 +94,24 @@ public struct EppSettingsPage: View {
                 .labelsHidden()
                 .fixedSize()
                 .padding(.bottom, 4)
+            }
+
+            if selected == "shortcuts" {
+                let clashes = shortcutClashes()
+                if !clashes.isEmpty {
+                    VStack(alignment: .leading, spacing: 4) {
+                        ForEach(clashes, id: \.self) { line in
+                            Label(line, systemImage: "exclamationmark.triangle.fill")
+                                .font(.callout)
+                        }
+                    }
+                    .foregroundStyle(.orange)
+                    .padding(10)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(.orange.opacity(0.1), in: RoundedRectangle(cornerRadius: 8))
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 4)
+                }
             }
 
             // Form은 이 창 안에서 내용 높이만큼 커지려 한다. 그대로 두면 창보다 길어져 창 전체(왼쪽 목록까지)가

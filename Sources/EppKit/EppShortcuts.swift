@@ -1,7 +1,7 @@
 import AppKit
 import SwiftUI
 
-/// 기능이 쓰는 전역 단축키 하나. Epp 설정 → 일반 → 단축키에 모아 보여 주고, 겹치면 알린다.
+/// 기능이 쓰는 전역 단축키 하나. 켠 다른 기능과 키가 같으면 그 기능의 단축키 탭 위에 알린다.
 public struct EppShortcutInfo: Identifiable, Sendable {
     public let title: String
     /// 화면에 보이는 키 (예: "⌃⌥V")
@@ -110,7 +110,7 @@ public struct EppShortcutRow: View {
 /// 단축키 탭 아래쪽의 공통 안내.
 public enum EppShortcutText {
     public static var footer: String {
-        EppText.t("다른 앱과 겹치면 먼저 등록한 앱이 키를 받아요. Epp 설정 → 일반 → 단축키에서 모든 기능의 단축키를 한눈에 볼 수 있어요.",
-                  "If another app uses the same keys, the one that registered first gets them. See every feature's shortcuts in Epp Settings → General → Shortcuts.")
+        EppText.t("다른 앱과 겹치면 먼저 등록한 앱이 키를 받아요. 켠 다른 기능과 겹치면 이 탭 위에 알려 줘요.",
+                  "If another app uses the same keys, the one that registered first gets them. If another feature you turned on uses them, you'll see a warning above this tab.")
     }
 }

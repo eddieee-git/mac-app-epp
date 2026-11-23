@@ -164,12 +164,27 @@ private struct SettingsView: View {
         return results
     }
 
+    /// 이 기능의 전역 단축키 중 켠 다른 기능과 같은 키. 그 기능의 단축키 탭 위에 알린다.
+    static func shortcutClashes(of id: String, manager: ModuleManager) -> [String] {
+        guard let mine = manager.module(id: id)?.globalShortcuts(), !mine.isEmpty else { return [] }
+        let others = manager.enabledTypes.filter { $0.info.id != id }.flatMap { type in
+            (manager.module(id: type.info.id)?.globalShortcuts() ?? []).map { (type.info, $0) }
+        }
+        return mine.flatMap { shortcut in
+            others.filter { $0.1.keys == shortcut.keys }.map { info, other in
+                L("\"%@\" (%@) — %@의 \"%@\"와 같은 키예요. 먼저 등록한 기능만 동작해요.",
+                  shortcut.title, shortcut.keys, info.name, other.title)
+            }
+        }
+    }
+
     @ViewBuilder private var detail: some View {
         if router.page == SettingsRouter.general {
             GeneralPage(manager: manager, router: router)
         } else if let info = ModuleList.infos.first(where: { $0.id == router.page }) {
             if let module = manager.module(id: info.id) {
-                EppSettingsPage(info: info, tabs: module.settingsTabs(), gettingStarted: module.makeGettingStarted())
+                EppSettingsPage(info: info, tabs: module.settingsTabs(), gettingStarted: module.makeGettingStarted(),
+                                shortcutClashes: { [manager] in Self.shortcutClashes(of: info.id, manager: manager) })
                     .id(info.id)
             } else {
                 DisabledModulePage(info: info) { manager.setEnabled(info.id, true) }
@@ -203,7 +218,7 @@ private struct GeneralPage: View {
     /// 설정 검색에서 이 쪽을 찾게 할 설정 이름들
     static var keywords: [String] {
         [L("기능"), L("권한"), EppPermission.accessibility.title, EppPermission.screenRecording.title,
-         L("단축키"), L("로그인 시 실행"), L("Dock에 아이콘 보이기"), L("언어"),
+         L("로그인 시 실행"), L("Dock에 아이콘 보이기"), L("언어"),
          L("업데이트"), L("문제 해결"), L("진단 로그 남기기"), L("데이터 폴더"), L("정보")]
     }
 
@@ -250,7 +265,6 @@ private struct GeneralPage: View {
             }
 
             permissionSection
-            shortcutSection
 
             Section {
                 Toggle(L("로그인 시 실행"), isOn: $launchAtLogin)
@@ -359,44 +373,6 @@ private struct GeneralPage: View {
             Text(L("권한"))
         } footer: {
             Text(L("Mac은 권한을 Epp 하나에 줘요. 시스템 설정 → 개인정보 보호 및 보안에서 Epp를 켜면 모든 기능에 적용돼요."))
-                .font(.caption).foregroundStyle(.secondary)
-        }
-    }
-
-    /// 켠 기능의 전역 단축키를 한곳에. 같은 키를 두 기능이 쓰면 알린다. 누르면 그 기능의 단축키 탭으로 간다.
-    @ViewBuilder private var shortcutSection: some View {
-        let rows = manager.enabledTypes.flatMap { type -> [(EppModuleInfo, EppShortcutInfo)] in
-            (manager.module(id: type.info.id)?.globalShortcuts() ?? []).map { (type.info, $0) }
-        }
-        let counts = Dictionary(rows.map { ($0.1.keys, 1) }, uniquingKeysWith: +)
-        Section {
-            if rows.isEmpty {
-                Text(L("켠 기능 중에 전역 단축키를 쓰는 기능이 없어요.")).foregroundStyle(.secondary)
-            }
-            ForEach(Array(rows.enumerated()), id: \.offset) { _, row in
-                let (info, shortcut) = row
-                Button {
-                    router.go(page: info.id, tab: "shortcuts")
-                } label: {
-                    HStack {
-                        Image(systemName: info.symbol).foregroundStyle(.secondary).frame(width: 18)
-                            .accessibilityHidden(true)
-                        Text("\(info.name) · \(shortcut.title)")
-                        Spacer()
-                        if counts[shortcut.keys, default: 0] > 1 {
-                            Label(L("겹쳐요"), systemImage: "exclamationmark.triangle.fill")
-                                .font(.caption).foregroundStyle(.orange)
-                        }
-                        Text(shortcut.keys).font(.system(.body, design: .monospaced)).foregroundStyle(.secondary)
-                    }
-                    .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
-            }
-        } header: {
-            Text(L("단축키"))
-        } footer: {
-            Text(L("어디서나 동작하는 단축키예요. 누르면 그 기능의 단축키 탭에서 바꿀 수 있어요."))
                 .font(.caption).foregroundStyle(.secondary)
         }
     }

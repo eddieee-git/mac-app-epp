@@ -67,7 +67,7 @@ public protocol EppModule: AnyObject {
     /// Epp를 끝내도 되는지. 저장하지 못한 내용이 있으면 물어보고 false를 돌려줄 수 있다.
     func shouldQuit() -> Bool
 
-    /// 지금 등록한 전역 단축키(어디서나 동작하는 키). Epp 일반 → 단축키에 모아 보여 주고 겹치면 알린다.
+    /// 지금 등록한 전역 단축키(어디서나 동작하는 키). 켠 다른 기능과 겹치면 이 기능의 단축키 탭 위에 알린다.
     func globalShortcuts() -> [EppShortcutInfo]
 
     /// 이 기능이 쓰는 macOS 권한. 권한은 Epp 일반 → 권한 한 곳에서 다루고, 기능 설정에는 권한 칸을 두지 않는다.
