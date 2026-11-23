@@ -8,7 +8,7 @@ enum KeepySettings {
     static func tabs(settings: AppSettings, store: HistoryStore) -> [EppSettingsTab] {
         [
             EppSettingsTab("general", L("일반"), keywords: [
-                L("권한"), L("손쉬운 사용"), L("기록"), L("보관할 항목 수"), L("기록 창 위치"), L("저장 위치"),
+                L("기록"), L("보관할 항목 수"), L("기록 창 위치"), L("저장 위치"),
                 L("모든 기록 지우기…"), L("붙여 넣기"), L("고르면 바로 붙여 넣기"),
             ]) { GeneralTab(settings: settings, store: store) },
             EppSettingsTab("ignored", L("제외 앱"), keywords: [
@@ -25,13 +25,15 @@ enum KeepySettings {
 struct KeepyGettingStarted: View {
     @ObservedObject var settings: AppSettings
     @ObservedObject var store: HistoryStore
+    let openPermissions: () -> Void
     @State private var trusted = Paster.isTrusted
     private let poll = Timer.publish(every: 1.5, on: .main, in: .common).autoconnect()
 
     var body: some View {
         EppStepList([
-            .init(L("손쉬운 사용 권한 허용하기 (아래 일반 → 권한)"), done: trusted || !settings.pasteAutomatically),
-            .init(L("평소처럼 복사하기. Keepy가 기록해 둬요."), done: !store.items.isEmpty),
+            .init(L("손쉬운 사용 권한 허용하기 (Epp 설정 → 일반 → 권한)"), done: trusted || !settings.pasteAutomatically,
+                  action: (L("권한 열기"), openPermissions)),
+            .init(L("평소처럼 복사하기. Epp가 기록해 둬요."), done: !store.items.isEmpty),
             .init(L("%@로 기록을 열고 ↩로 붙여 넣기", settings.hotKey?.displayText ?? L("메뉴")), done: settings.hasPasted),
         ], footer: L("⌘1~9로 바로 고르고, ⌘P로 자주 쓰는 항목을 맨 위에 고정해요. 비밀번호 관리자에서 복사한 내용은 기록하지 않아요."))
         .onReceive(poll) { _ in trusted = Paster.isTrusted }
@@ -50,15 +52,6 @@ private struct GeneralTab: View {
 
     var body: some View {
         Form {
-            Section(L("권한")) {
-                EppPermissionRow(title: L("손쉬운 사용"),
-                                 detail: L("고른 항목을 앞에 있던 앱에 바로 붙여 넣는 데 필요해요. 없어도 클립보드에 복사는 돼요."),
-                                 granted: trusted) {
-                    Paster.requestTrust()
-                    Paster.openAccessibilitySettings()
-                }
-            }
-
             Section(L("기록")) {
                 Picker(L("보관할 항목 수"), selection: $settings.historyLimit) {
                     ForEach(AppSettings.historyLimits, id: \.self) { Text(L("%ld개", $0)).tag($0) }

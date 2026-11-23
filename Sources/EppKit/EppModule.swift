@@ -5,21 +5,28 @@ import SwiftUI
 public struct EppModuleInfo: Sendable, Identifiable {
     /// 주소·저장 이름에 쓰는 소문자 id (예: "keepy"). 한 번 정하면 바꾸지 않는다(설정과 데이터 위치가 여기에 묶인다).
     public let id: String
-    /// 화면에 보이는 이름 (예: "Keepy")
-    public let name: String
+    /// 저장 이름: 데이터 폴더(~/Library/Application Support/Epp/<이름>)와 로그에 쓴다. 옛 단독 앱 이름(예: "Keepy"). 바꾸지 않는다.
+    public let storageName: String
+    /// 화면에 보이는 기능 이름. 앱 이름이 아니라 하는 일로 짓는다(예: "클립보드" / "Clipboard").
+    public let nameKo: String
+    public let nameEn: String
     /// 메뉴와 설정에 쓰는 SF Symbol 이름
     public let symbol: String
     public let summaryKo: String
     public let summaryEn: String
 
-    public init(id: String, name: String, symbol: String, summaryKo: String, summaryEn: String) {
+    public init(id: String, storageName: String, nameKo: String, nameEn: String, symbol: String,
+                summaryKo: String, summaryEn: String) {
         self.id = id
-        self.name = name
+        self.storageName = storageName
+        self.nameKo = nameKo
+        self.nameEn = nameEn
         self.symbol = symbol
         self.summaryKo = summaryKo
         self.summaryEn = summaryEn
     }
 
+    public var name: String { EppLanguage.isKorean ? nameKo : nameEn }
     public var summary: String { EppLanguage.isKorean ? summaryKo : summaryEn }
 }
 
@@ -51,6 +58,9 @@ public protocol EppModule: AnyObject {
     /// `epp://<id>/<명령>` 주소로 열렸을 때. 예: epp://keepy/show
     func handle(url: URL)
 
+    /// 이 기능이 쓰는 macOS 권한. 권한은 Epp 일반 → 권한 한 곳에서 다루고, 기능 설정에는 권한 칸을 두지 않는다.
+    static var permissionNeeds: [EppPermissionNeed] { get }
+
     /// 자체 점검(`Epp --self-test`). 실제 설정·데이터는 건드리지 않는다. 실패가 없으면 true.
     static func runSelfTest() -> Bool
 }
@@ -58,6 +68,7 @@ public protocol EppModule: AnyObject {
 public extension EppModule {
     func handle(url: URL) {}
     func makeGettingStarted() -> AnyView? { nil }
+    static var permissionNeeds: [EppPermissionNeed] { [] }
 }
 
 /// 본체가 기능에 넘겨주는 것: 그 기능만 쓰는 설정 저장소와 데이터 폴더, 본체 동작.
@@ -79,14 +90,18 @@ public final class EppContext {
     }
     /// 이 기능의 id
     public let moduleID: String
+    /// Epp 설정 → 일반(권한 칸이 있는 쪽)을 연다.
+    public let openPermissions: () -> Void
     /// Epp 본체의 메뉴바 아이콘. 메뉴바 아이콘을 숨기는 기능(Peeky)이 이것까지 숨기지 않게 한다.
     public let hostStatusItems: () -> [NSStatusItem]
     /// 진단 로그 같은 파일 이름 앞에 붙일 앱 이름 ("Epp" 또는 "Epp Dev")
     public let appName: String
 
     public init(moduleID: String, defaults: UserDefaults, dataDirectory: URL, openSettings: @escaping () -> Void,
+                openPermissions: @escaping () -> Void = {},
                 hostStatusItems: @escaping () -> [NSStatusItem] = { [] }, appName: String = "Epp") {
         self.moduleID = moduleID
+        self.openPermissions = openPermissions
         self.defaults = defaults
         self.dataDirectory = dataDirectory
         self.openSettings = openSettings

@@ -8,14 +8,14 @@ enum PeekySettings {
     static func tabs() -> [EppSettingsTab] {
         [
             EppSettingsTab("general", L("일반"), keywords: [
-                L("권한"), L("손쉬운 사용 (필수)"), L("화면 기록 (선택)"), L("메뉴바 정리"), L("다시 정리"),
-                L("Peeky 아이콘을 오른쪽 끝으로 옮기기"), L("문제 해결"), L("진단 로그 남기기"),
+                L("메뉴바 정리"), L("다시 정리"),
+                L("바 아이콘을 오른쪽 끝으로 옮기기"), L("문제 해결"), L("진단 로그 남기기"),
             ]) { PeekySettingsView(tab: .general) },
             EppSettingsTab("icons", L("아이콘"), keywords: [
                 L("메뉴바 아이콘"), L("보이기"), L("숨기기"), L("「숨기기」 아이콘을 메뉴바에서 숨기기"), L("항목 검색"),
             ]) { PeekySettingsView(tab: .icons) },
             EppSettingsTab("groups", L("그룹"), keywords: [
-                L("그룹 추가"), L("Peeky 바 모양"), L("줄 수"), L("바 최대 너비"), L("순서 초기화"),
+                L("그룹 추가"), L("아이콘 바 모양"), L("줄 수"), L("바 최대 너비"), L("순서 초기화"),
             ]) { PeekySettingsView(tab: .groups) },
             EppSettingsTab("shortcuts", L("단축키"), keywords: [
                 L("그룹 단축키"), L("보조 키"),
@@ -26,6 +26,7 @@ enum PeekySettings {
 
 /// 설정 맨 위 시작하기 상자. 끝낸 단계는 체크로 바뀐다.
 struct PeekyGettingStarted: View {
+    let openPermissions: () -> Void
     @ObservedObject private var store = ItemStore.shared
     @ObservedObject private var prefs: Preferences = Preferences.shared
     @State private var axTrusted = AX.isTrusted
@@ -33,11 +34,12 @@ struct PeekyGettingStarted: View {
 
     var body: some View {
         EppStepList([
-            .init(L("손쉬운 사용 권한 허용하기 (아래 일반 → 권한)"), done: axTrusted),
+            .init(L("손쉬운 사용 권한 허용하기 (Epp 설정 → 일반 → 권한)"), done: axTrusted,
+                  action: (L("권한 열기"), openPermissions)),
             .init(L("아이콘 탭에서 숨길 아이콘을 「숨기기」로 고르기"),
                   done: store.items.contains { !$0.isFixed && prefs.group(for: $0.id) != nil }),
             .init(L("「숨기기」 아이콘을 메뉴바에서 숨기기 켜기"), done: prefs.hideInMenuBar),
-        ], footer: L("다 했으면 메뉴바의 Peeky 아이콘을 눌러 보세요. 숨긴 아이콘이 바에 모여 있어요."))
+        ], footer: L("다 했으면 메뉴바의 바 아이콘을 눌러 보세요. 숨긴 아이콘이 바에 모여 있어요."))
         .onReceive(poll) { _ in axTrusted = AX.isTrusted }
     }
 }
@@ -63,7 +65,6 @@ struct PeekySettingsView: View {
             switch tab {
             case .general:
                 if !hiddenIcons.isEmpty { hiddenIconSection }
-                permissionsSection
                 menuBarSection
                 advancedSection
             case .icons:
@@ -102,34 +103,14 @@ struct PeekySettingsView: View {
 
     private var hiddenIconSection: some View {
         Section {
-            Label(L("Peeky 아이콘이 메뉴바에서 안 보여요 (%@)", hiddenIcons.joined(separator: ", ")),
+            Label(L("바 아이콘이 메뉴바에서 안 보여요 (%@)", hiddenIcons.joined(separator: ", ")),
                   systemImage: "exclamationmark.triangle.fill")
                 .foregroundStyle(.orange)
             Text(prefs.hotKeyModifiers == .off
-                 ? L("노치에 가려졌거나 메뉴바에 자리가 없어요. ⌘를 누른 채 다른 아이콘을 왼쪽으로 옮겨 자리를 만들고, Peeky 아이콘은 오른쪽 끝으로 옮겨 두세요. 그래도 안 보이면 시스템 설정 → 메뉴 막대에서 Peeky가 켜져 있는지 확인하세요.")
-                 : L("노치에 가려졌거나 메뉴바에 자리가 없어요. 단축키 %@1로 바를 열 수 있어요. ⌘를 누른 채 다른 아이콘을 왼쪽으로 옮겨 자리를 만들고, Peeky 아이콘은 오른쪽 끝으로 옮겨 두세요. 그래도 안 보이면 시스템 설정 → 메뉴 막대에서 Peeky가 켜져 있는지 확인하세요.", prefs.hotKeyModifiers.symbol))
+                 ? L("노치에 가려졌거나 메뉴바에 자리가 없어요. ⌘를 누른 채 다른 아이콘을 왼쪽으로 옮겨 자리를 만들고, 바 아이콘은 오른쪽 끝으로 옮겨 두세요. 그래도 안 보이면 시스템 설정 → 메뉴 막대에서 Epp가 켜져 있는지 확인하세요.")
+                 : L("노치에 가려졌거나 메뉴바에 자리가 없어요. 단축키 %@1로 바를 열 수 있어요. ⌘를 누른 채 다른 아이콘을 왼쪽으로 옮겨 자리를 만들고, 바 아이콘은 오른쪽 끝으로 옮겨 두세요. 그래도 안 보이면 시스템 설정 → 메뉴 막대에서 Epp가 켜져 있는지 확인하세요.", prefs.hotKeyModifiers.symbol))
                 .font(.callout).foregroundStyle(.secondary)
-            Button(L("Peeky 아이콘을 오른쪽 끝으로 옮기기")) { StatusIconCheck.resetPositions() }
-        }
-    }
-
-    private var permissionsSection: some View {
-        Section(L("권한")) {
-            EppPermissionRow(title: L("손쉬운 사용 (필수)"),
-                             detail: L("다른 앱의 메뉴바 항목을 찾고 클릭하는 데 필요해요."),
-                             granted: axTrusted) {
-                AX.requestTrust()
-                AX.openAccessibilitySettings()
-            }
-            EppPermissionRow(title: L("화면 기록 (선택)"),
-                             detail: L("실제 아이콘 모양을 보여 줘요. 없으면 앱 아이콘으로 대신 보여요. 시스템 설정에서 Epp를 허용한 뒤 Epp를 다시 열어야 적용돼요."),
-                             granted: store.screenCaptureOK) {
-                AX.requestScreenCapture()
-                DispatchQueue.main.asyncAfter(deadline: .now() + 2) { store.checkScreenCapture() }
-            } extra: {
-                Button(L("다시 열기")) { EppApp.relaunch() }
-                    .help(L("시스템 설정에서 켠 뒤에는 Epp를 다시 열어야 적용돼요"))
-            }
+            Button(L("바 아이콘을 오른쪽 끝으로 옮기기")) { StatusIconCheck.resetPositions() }
         }
     }
 
@@ -160,7 +141,7 @@ struct PeekySettingsView: View {
     }
 
     private var barSection: some View {
-        Section(L("Peeky 바 모양")) {
+        Section(L("아이콘 바 모양")) {
             Picker(L("줄 수"), selection: $prefs.rowCount) {
                 Text(L("한 줄")).tag(1)
                 Text(L("두 줄")).tag(2)
@@ -188,8 +169,8 @@ struct PeekySettingsView: View {
                 Button(L("다시 정리")) { StatusIconCheck.arrange() }
                     .disabled(!prefs.hideInMenuBar)
             }
-            LabeledContent(L("Peeky 아이콘이 안 보이면")) {
-                Button(L("Peeky 아이콘을 오른쪽 끝으로 옮기기")) { StatusIconCheck.resetPositions() }
+            LabeledContent(L("바 아이콘이 안 보이면")) {
+                Button(L("바 아이콘을 오른쪽 끝으로 옮기기")) { StatusIconCheck.resetPositions() }
             }
         } header: {
             Text(L("메뉴바 정리"))
@@ -215,7 +196,7 @@ struct PeekySettingsView: View {
         } footer: {
             Text(L("그룹마다 메뉴바에 아이콘이 하나씩 생기고, 누르면 그 그룹의 항목만 바에 보여요. ⋯에서 그룹마다 줄 수와 표시 방식을 따로 정할 수 있어요."))
                 .font(.caption).foregroundStyle(.secondary)
-            Text(L("그룹은 Peeky 바에 보일 항목만 정해요. 메뉴바에서도 빼려면 「메뉴바 정리」에서 숨기기를 켜세요."))
+            Text(L("그룹은 아이콘 바에 보일 항목만 정해요. 메뉴바에서도 빼려면 「메뉴바 정리」에서 숨기기를 켜세요."))
                 .font(.caption).foregroundStyle(.secondary)
         }
     }
@@ -225,7 +206,7 @@ struct PeekySettingsView: View {
         Section {
             Toggle(isOn: $prefs.hideInMenuBar) {
                 Text(L("「숨기기」 아이콘을 메뉴바에서 숨기기"))
-                Text(L("켜면 Peeky가 아이콘 자리를 옮겨 정리해요. 정리하는 동안 마우스가 잠깐 움직여요."))
+                Text(L("켜면 Epp가 아이콘 자리를 옮겨 정리해요. 정리하는 동안 마우스가 잠깐 움직여요."))
             }
         }
         Section {
@@ -265,7 +246,7 @@ struct PeekySettingsView: View {
             .buttonStyle(.borderless)
             .font(.callout)
         } footer: {
-            Text(L("「보이기」는 메뉴바에 그대로 둬요. 「숨기기」는 메뉴바에서 빼고 Peeky 바에 모아요. Peeky 아이콘을 누르면 바가 열리고, 바에서 누르면 원래 메뉴가 열려요."))
+            Text(L("「보이기」는 메뉴바에 그대로 둬요. 「숨기기」는 메뉴바에서 빼고 아이콘 바에 모아요. 바 아이콘을 누르면 바가 열리고, 바에서 누르면 원래 메뉴가 열려요."))
                 .font(.caption).foregroundStyle(.secondary)
             Text(L("자리가 모자라면 macOS는 왼쪽 아이콘부터 숨겨요. 꼭 보여야 하는 「보이기」 아이콘은 오른쪽 클릭 → 맨 오른쪽으로 옮기기를 고르세요."))
                 .font(.caption).foregroundStyle(.secondary)

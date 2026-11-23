@@ -64,7 +64,9 @@ private struct SettingsView: View {
 
     var body: some View {
         NavigationSplitView {
-            Group {
+            // 검색창은 직접 둔다. `.searchable`은 창에 도구 막대를 더해서 창 전체가 위로 밀려 보였다.
+            VStack(spacing: 0) {
+                searchField
                 if query.trimmingCharacters(in: .whitespaces).isEmpty {
                     pageList
                 } else {
@@ -76,8 +78,25 @@ private struct SettingsView: View {
         } detail: {
             detail
         }
-        .searchable(text: $query, placement: .sidebar, prompt: L("설정 검색"))
         .frame(width: Self.size.width, height: Self.size.height)
+    }
+
+    private var searchField: some View {
+        HStack(spacing: 6) {
+            Image(systemName: "magnifyingglass").foregroundStyle(.secondary).accessibilityHidden(true)
+            TextField(L("설정 검색"), text: $query).textFieldStyle(.plain)
+            if !query.isEmpty {
+                Button { query = "" } label: { Image(systemName: "xmark.circle.fill") }
+                    .buttonStyle(.borderless).foregroundStyle(.secondary)
+                    .accessibilityLabel(L("검색어 지우기"))
+            }
+        }
+        .padding(.horizontal, 8)
+        .padding(.vertical, 5)
+        .background(.quaternary, in: RoundedRectangle(cornerRadius: 7))
+        .padding(.horizontal, 10)
+        .padding(.top, 8)
+        .padding(.bottom, 4)
     }
 
     private var pageList: some View {
@@ -190,10 +209,13 @@ private struct DisabledModulePage: View {
 private struct GeneralPage: View {
     /// 설정 검색에서 이 쪽을 찾게 할 설정 이름들
     static var keywords: [String] {
-        [L("기능"), L("로그인 시 실행"), L("Dock에 아이콘 보이기"), L("언어"), L("정보"), L("버전 %@", "")]
+        [L("기능"), L("권한"), EppPermission.accessibility.title, EppPermission.screenRecording.title,
+         L("로그인 시 실행"), L("Dock에 아이콘 보이기"), L("언어"), L("정보")]
     }
 
     @ObservedObject var manager: ModuleManager
+    @ObservedObject private var permissions = EppPermissions.shared
+    private let poll = Timer.publish(every: 2, on: .main, in: .common).autoconnect()
 
     @State private var launchAtLogin = SMAppService.mainApp.status == .enabled
     @State private var showInDock = DockIcon.isOn
@@ -230,6 +252,8 @@ private struct GeneralPage: View {
                      : L("켠 기능만 실행돼요. 끈 기능은 아무 일도 하지 않고, 단축키도 등록하지 않아요."))
                     .font(.caption).foregroundStyle(.secondary)
             }
+
+            permissionSection
 
             Section {
                 Toggle(L("로그인 시 실행"), isOn: $launchAtLogin)
@@ -274,6 +298,45 @@ private struct GeneralPage: View {
             }
         }
         .formStyle(.grouped)
+        .onAppear { permissions.refresh() }
+        .onReceive(poll) { _ in permissions.refresh() }
+    }
+
+    /// 권한은 Epp 하나에 주는 것이라 여기 한 곳에서 다룬다. 켜진 기능이 쓰는 권한만, 어느 기능이 왜 쓰는지와 함께 보여 준다.
+    @ViewBuilder private var permissionSection: some View {
+        let used = EppPermission.allCases.compactMap { permission -> (EppPermission, [String], Bool)? in
+            var reasons: [String] = []
+            var required = false
+            for type in manager.enabledTypes {
+                for need in type.permissionNeeds where need.permission == permission {
+                    reasons.append("\(type.info.name): \(need.reason)")
+                    required = required || need.required
+                }
+            }
+            return reasons.isEmpty ? nil : (permission, reasons, required)
+        }
+        Section {
+            if used.isEmpty {
+                Text(L("켠 기능 중에 권한이 필요한 기능이 없어요.")).foregroundStyle(.secondary)
+            }
+            ForEach(used, id: \.0) { permission, reasons, required in
+                EppPermissionRow(title: permission.title + (required ? L(" (필수)") : L(" (선택)")),
+                                 detail: reasons.joined(separator: "\n"),
+                                 granted: permissions.isGranted(permission)) {
+                    permissions.request(permission)
+                } extra: {
+                    if permission == .screenRecording {
+                        Button(L("Epp 다시 열기")) { EppApp.relaunch() }
+                            .help(L("화면 기록은 허용한 뒤 Epp를 다시 열어야 적용돼요."))
+                    }
+                }
+            }
+        } header: {
+            Text(L("권한"))
+        } footer: {
+            Text(L("Mac은 권한을 Epp 하나에 줘요. 시스템 설정 → 개인정보 보호 및 보안에서 Epp를 켜면 모든 기능에 적용돼요."))
+                .font(.caption).foregroundStyle(.secondary)
+        }
     }
 
     private func setLaunchAtLogin(_ enabled: Bool) {

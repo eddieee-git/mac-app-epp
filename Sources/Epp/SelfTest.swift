@@ -24,7 +24,7 @@ enum SelfTest {
         for type in ModuleList.all {
             let suite = ModuleManager.defaultsSuite(for: type.info)
             expect(suite.hasSuffix("." + type.info.id), "\(type.info.name) 설정 저장소 이름 \(suite)")
-            expect(ModuleManager.dataDirectory(for: type.info).lastPathComponent == type.info.name, "\(type.info.name) 데이터 폴더")
+            expect(ModuleManager.dataDirectory(for: type.info).lastPathComponent == type.info.storageName, "\(type.info.name) 데이터 폴더")
         }
 
         print("[Epp] 단축키")

@@ -64,11 +64,8 @@ public struct EppSettingsPage: View {
             .padding(.bottom, 10)
 
             if let gettingStarted, !gettingStartedHidden {
-                GroupBox {
-                    gettingStarted
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(4)
-                } label: {
+                // GroupBox는 안의 긴 글을 폭 없이 재서 한 글자씩 줄을 바꿔 아주 길어진 적이 있다. 폭이 정해진 상자를 직접 그린다.
+                VStack(alignment: .leading, spacing: 8) {
                     HStack {
                         Text(EppText.t("시작하기", "Getting Started")).bold()
                         Spacer()
@@ -76,7 +73,11 @@ public struct EppSettingsPage: View {
                             .buttonStyle(.borderless)
                             .font(.callout)
                     }
+                    gettingStarted
                 }
+                .padding(12)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(.quaternary.opacity(0.6), in: RoundedRectangle(cornerRadius: 8))
                 .padding(.horizontal, 20)
                 .padding(.bottom, 10)
             }
@@ -91,9 +92,14 @@ public struct EppSettingsPage: View {
                 .padding(.bottom, 4)
             }
 
-            (tabs.first { $0.id == selected } ?? tabs.first)?.content
-                .formStyle(.grouped)
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+            // Form은 이 창 안에서 내용 높이만큼 커지려 한다. 그대로 두면 창보다 길어져 창 전체(왼쪽 목록까지)가
+            // 위로 밀린다. 남은 자리를 먼저 정하고(Color.clear) 그 안에 Form을 얹어서, 넘치면 Form 안에서 스크롤하게 한다.
+            Color.clear
+                .overlay(alignment: .top) {
+                    (tabs.first { $0.id == selected } ?? tabs.first)?.content
+                        .formStyle(.grouped)
+                }
+                .clipped()
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
     }
@@ -104,9 +110,12 @@ public struct EppStepList: View {
     public struct Step {
         public let text: String
         public let done: Bool
-        public init(_ text: String, done: Bool) {
+        /// 끝내지 않은 단계 오른쪽에 붙일 버튼 (예: "권한 열기")
+        public let action: (title: String, run: () -> Void)?
+        public init(_ text: String, done: Bool, action: (title: String, run: () -> Void)? = nil) {
             self.text = text
             self.done = done
+            self.action = action
         }
     }
 
@@ -128,12 +137,15 @@ public struct EppStepList: View {
                         .accessibilityLabel(step.done ? EppText.t("끝냄", "Done") : "\(index + 1)")
                     Text(step.text)
                         .foregroundStyle(step.done ? .secondary : .primary)
-                        .fixedSize(horizontal: false, vertical: true)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    if !step.done, let action = step.action {
+                        Button(action.title, action: action.run).controlSize(.small)
+                    }
                 }
             }
             if let footer {
                 Text(footer).font(.caption).foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
+                    .frame(maxWidth: .infinity, alignment: .leading)
             }
         }
     }
@@ -182,6 +194,6 @@ public extension EppPermissionRow where Extra == EmptyView {
 }
 
 /// EppKit 안의 짧은 공통 문구(사전 없이 두 언어를 바로 적는다).
-enum EppText {
-    static func t(_ ko: String, _ en: String) -> String { EppLanguage.isKorean ? ko : en }
+public enum EppText {
+    public static func t(_ ko: String, _ en: String) -> String { EppLanguage.isKorean ? ko : en }
 }

@@ -69,6 +69,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
         manager.startEnabled()
 
+        #if DEBUG
+        if let page = UserDefaults.standard.string(forKey: "openSettingsPage") {
+            showSettings(page: page)
+        }
+        #endif
+
         // 처음 켤 때는 켠 기능이 없으니 설정 창을 열어 기능을 고르게 한다.
         if manager.soloID == nil && !hasLaunchedBefore {
             hasLaunchedBefore = true

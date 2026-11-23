@@ -272,16 +272,16 @@ extension MenuBarItem {
     @MainActor
     func status(hiding: Bool, unmovable: Bool) -> (text: String, help: String)? {
         if unmovable {
-            return (L("옮기지 못함"), L("노치 뒤에 있어 Peeky가 잡을 수 없었어요. 메뉴바 아이콘을 줄이면 다음 정리 때 옮겨요."))
+            return (L("옮기지 못함"), L("노치 뒤에 있어 Epp가 잡을 수 없었어요. 메뉴바 아이콘을 줄이면 다음 정리 때 옮겨요."))
         }
         guard isHiddenByNotch else { return nil }
         if let frame, !NotchGeometry.isOffScreen(frame) {
-            return (L("노치 뒤"), L("노치에 가려 메뉴바에서 안 보여요. Peeky 바에서 누를 수 있어요."))
+            return (L("노치 뒤"), L("노치에 가려 메뉴바에서 안 보여요. 아이콘 바에서 누를 수 있어요."))
         }
         if hiding {
-            return (L("숨겨 둠"), L("› 버튼 왼쪽에 있어서 메뉴바에서 숨겼어요. Peeky 바에서 누를 수 있어요."))
+            return (L("숨겨 둠"), L("› 버튼 왼쪽에 있어서 메뉴바에서 숨겼어요. 아이콘 바에서 누를 수 있어요."))
         }
-        return (L("자리 없음"), L("메뉴바에 자리가 없어 밀려났어요. Peeky 바에서 누를 수 있어요."))
+        return (L("자리 없음"), L("메뉴바에 자리가 없어 밀려났어요. 아이콘 바에서 누를 수 있어요."))
     }
 }
 

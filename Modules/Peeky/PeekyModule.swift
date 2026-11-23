@@ -4,7 +4,7 @@ import Combine
 import EppKit
 import SwiftUI
 
-/// Peeky: 노치에 가려진 메뉴바 아이콘을 바에 모아 보여 주고, 고른 아이콘을 메뉴바에서 숨긴다.
+/// 메뉴바(옛 Peeky): 노치에 가려진 메뉴바 아이콘을 바에 모아 보여 주고, 고른 아이콘을 메뉴바에서 숨긴다.
 /// 원래 단독 앱(eddieee-git/mac-app-peeky)의 AppDelegate를 Epp 기능 약속에 맞게 옮긴 것.
 ///
 /// Peeky는 그룹마다 자기 메뉴바 아이콘을, 숨기기를 켜면 ‹ › 버튼과 구분선을 따로 만든다(그게 Peeky가 하는 일이라서).
@@ -12,7 +12,7 @@ import SwiftUI
 @MainActor
 public final class PeekyModule: EppModule {
     public static let info = EppModuleInfo(
-        id: "peeky", name: "Peeky", symbol: "menubar.rectangle",
+        id: "peeky", storageName: "Peeky", nameKo: "메뉴바", nameEn: "Menu Bar", symbol: "menubar.rectangle",
         summaryKo: "노치에 가려진 메뉴바 아이콘 꺼내 보기",
         summaryEn: "Menu bar icons hidden behind the notch"
     )
@@ -153,7 +153,7 @@ public final class PeekyModule: EppModule {
 
     public func settingsTabs() -> [EppSettingsTab] { PeekySettings.tabs() }
 
-    public func makeGettingStarted() -> AnyView? { AnyView(PeekyGettingStarted()) }
+    public func makeGettingStarted() -> AnyView? { AnyView(PeekyGettingStarted(openPermissions: context.openPermissions)) }
 
     /// epp://peeky/open — 첫 그룹 바를 연다. epp://peeky/arrange — 다시 정리.
     public func handle(url: URL) {
@@ -164,6 +164,15 @@ public final class PeekyModule: EppModule {
     }
 
     public static func runSelfTest() -> Bool { SelfTest.run() }
+
+    public static let permissionNeeds = [
+        EppPermissionNeed(.accessibility, required: true,
+                          reasonKo: "다른 앱의 메뉴바 아이콘을 찾고 누르기",
+                          reasonEn: "Find and click other apps' menu bar icons"),
+        EppPermissionNeed(.screenRecording, required: false,
+                          reasonKo: "아이콘 바에 실제 아이콘 모양 보여 주기 (없으면 앱 아이콘)",
+                          reasonEn: "Show real icon images in the icon bar (app icons without it)"),
+    ]
 
     private func showSettings() { context.openSettings() }
 
@@ -187,7 +196,7 @@ public final class PeekyModule: EppModule {
             menu.addItem(withTitle: L("다시 정리"), action: #selector(menuArrange), keyEquivalent: "").target = self
         }
         menu.addItem(.separator())
-        menu.addItem(withTitle: L("Peeky 아이콘을 오른쪽 끝으로 옮기기"), action: #selector(menuResetIcons), keyEquivalent: "").target = self
+        menu.addItem(withTitle: L("바 아이콘을 오른쪽 끝으로 옮기기"), action: #selector(menuResetIcons), keyEquivalent: "").target = self
     }
 
     @objc private func menuArrange() { arrangeMenuBar(collapseAfter: true) }
@@ -336,9 +345,9 @@ public final class PeekyModule: EppModule {
 
     private func showHiderBlocked() {
         let alert = NSAlert()
-        alert.messageText = L("Peeky나 Epp 아이콘이 › 버튼 왼쪽에 있어요")
-        alert.informativeText = L("이대로 숨기면 그 아이콘도 사라져서 펼쳐 두었어요. Peeky 아이콘을 오른쪽 끝으로 옮긴 뒤 › 버튼을 다시 눌러 주세요. Epp 아이콘은 ⌘를 누른 채 › 오른쪽으로 끌어 주세요.")
-        alert.addButton(withTitle: L("Peeky 아이콘을 오른쪽 끝으로 옮기기"))
+        alert.messageText = L("바 아이콘이나 Epp 아이콘이 › 버튼 왼쪽에 있어요")
+        alert.informativeText = L("이대로 숨기면 그 아이콘도 사라져서 펼쳐 두었어요. 바 아이콘을 오른쪽 끝으로 옮긴 뒤 › 버튼을 다시 눌러 주세요. Epp 아이콘은 ⌘를 누른 채 › 오른쪽으로 끌어 주세요.")
+        alert.addButton(withTitle: L("바 아이콘을 오른쪽 끝으로 옮기기"))
         alert.addButton(withTitle: L("닫기"))
         NSApp.activate()
         if alert.runModal() == .alertFirstButtonReturn { resetIconPositions() }
@@ -393,7 +402,7 @@ public final class PeekyModule: EppModule {
             }()
             item.button?.image = NSImage(systemSymbolName: group.symbol, accessibilityDescription: group.name)
                 ?? NSImage(systemSymbolName: "ellipsis.rectangle", accessibilityDescription: group.name)
-            item.button?.toolTip = "Peeky – \(group.name) \(shortcutText(index: index))"
+            item.button?.toolTip = "\(Self.info.name) – \(group.name) \(shortcutText(index: index))"
         }
         registerHotKeys(groups: groups, modifiers: prefs.hotKeyModifiers)
     }
@@ -480,7 +489,7 @@ public final class PeekyModule: EppModule {
             menu.addItem(withTitle: title, action: #selector(menuToggleHidden), keyEquivalent: "").target = self
         }
         menu.addItem(.separator())
-        menu.addItem(withTitle: L("Peeky 설정…"), action: #selector(menuSettings), keyEquivalent: ",").target = self
+        menu.addItem(withTitle: L("메뉴바 설정…"), action: #selector(menuSettings), keyEquivalent: ",").target = self
         statusItem.menu = menu
         statusItem.button?.performClick(nil)
         statusItem.menu = nil

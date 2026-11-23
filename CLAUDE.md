@@ -37,6 +37,7 @@ Sources/EppKit/     모든 기능이 같이 쓰는 부품
   EppModule.swift     기능 약속(EppModule), 기능 정보(EppModuleInfo), 본체가 넘겨주는 것(EppContext)
   HotKey.swift        KeyCombo, 전역 단축키(번호 자동 배정, 처리기 하나)
   EppLanguage.swift   언어(설정의 "language"), 다시 열기, esc로 닫히는 창
+  EppPermissions.swift 권한 상태·요청(손쉬운 사용, 화면 기록), 기능이 알리는 필요(EppPermissionNeed)
   EppSettings.swift   기능 설정 틀(EppSettingsPage, EppSettingsTab), 시작하기(EppStepList), 권한 줄(EppPermissionRow)
 Sources/Epp/        본체
   main.swift          Dock 아이콘(설정 "showInDock", 기본 끔), --self-test, --only <id>(단독 실행), 하나만 실행
@@ -91,12 +92,19 @@ Modules/<이름>/     기능 하나 (예: Modules/Keepy)
 
 ## 화면 규칙 (모든 기능이 같게)
 
+- **기능 이름은 하는 일로**: 화면에는 앱 이름(Keepy, Peeky) 대신 기능 이름을 쓴다. `EppModuleInfo`의 `nameKo`/`nameEn`.
+  클립보드(Keepy) · 메뉴바(Peeky) · 타이머(Clocky) · 스티커(Floaty) · 캡처(Grabby).
+  코드 폴더·클래스·id·`storageName`(데이터 폴더, 로그 이름)은 옛 이름 그대로 둔다(바꾸면 저장한 설정과 데이터를 못 찾는다).
+  화면 문구에 앱 이름을 쓰지 않는다. 기능이 아니라 앱 전체를 말할 때는 "Epp".
+- **권한은 Epp 한 곳에서**: Mac은 권한을 Epp 앱 하나에 준다. 기능은 `static var permissionNeeds`로 무엇을 왜 쓰는지만 알리고,
+  Epp 설정 → 일반 → **권한**이 켜진 기능의 필요를 모아 한 줄씩 보여 준다(`EppPermissions.shared`). 기능 설정에는 권한 칸을 두지 않는다.
+  시작하기 단계의 권한 줄에는 "권한 열기" 버튼(`context.openPermissions`)을 단다.
+
 본체가 틀을 그리고, 기능은 내용만 넘긴다. 기능이 자기 설정 창·시작 안내 창을 따로 만들지 않는다.
 
 - **설정**: `settingsTabs()`가 `[EppSettingsTab]`을 돌려준다. 본체가 `EppSettingsPage`로 그린다:
   머리(아이콘·이름·설명) → 시작하기 상자 → 위쪽 탭 → 고른 탭의 `Form`(`.grouped`).
   - 탭 순서: **일반**(id `general`) · (기능 고유 탭) · **단축키**(id `shortcuts`). 단축키가 없으면 단축키 탭을 빼도 된다.
-  - **일반** 탭의 첫 섹션은 권한이 필요한 기능이면 **권한**. 줄은 `EppPermissionRow`(허용됨 초록 / 필요 주황 + 허용하기).
   - 로그인 시 실행, 언어, Dock, 업데이트, 정보는 본체 일반 쪽에만 둔다.
   - 탭마다 `keywords`에 그 탭의 설정 이름(`L("…")` 그대로)을 넣는다. 설정 창 왼쪽 위 **설정 검색**이 이걸로 찾는다.
   - 창 도구 막대(`.searchable(placement: .toolbar)`)를 쓰지 않는다. 다른 쪽까지 모양이 바뀐다. 목록을 거르는 검색은 그 목록 바로 위에 둔다.

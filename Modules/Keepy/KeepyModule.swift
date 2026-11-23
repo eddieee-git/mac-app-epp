@@ -3,12 +3,12 @@ import Combine
 import EppKit
 import SwiftUI
 
-/// Keepy: 복사한 내용을 모아 두었다가 다시 붙여 넣는 클립보드 기록.
+/// 클립보드(옛 Keepy): 복사한 내용을 모아 두었다가 다시 붙여 넣는 클립보드 기록.
 /// 원래 단독 앱(eddieee-git/mac-app-keepy)의 AppDelegate를 Epp 기능 약속에 맞게 옮긴 것.
 @MainActor
 public final class KeepyModule: EppModule {
     public static let info = EppModuleInfo(
-        id: "keepy", name: "Keepy", symbol: "doc.on.clipboard",
+        id: "keepy", storageName: "Keepy", nameKo: "클립보드", nameEn: "Clipboard", symbol: "doc.on.clipboard",
         summaryKo: "복사한 내용을 모아 두고 다시 붙여 넣는 클립보드 기록",
         summaryEn: "Clipboard history to paste again"
     )
@@ -68,10 +68,16 @@ public final class KeepyModule: EppModule {
     }
 
     public func makeGettingStarted() -> AnyView? {
-        AnyView(KeepyGettingStarted(settings: settings, store: store))
+        AnyView(KeepyGettingStarted(settings: settings, store: store, openPermissions: context.openPermissions))
     }
 
     public static func runSelfTest() -> Bool { SelfTest.run() }
+
+    public static let permissionNeeds = [
+        EppPermissionNeed(.accessibility, required: false,
+                          reasonKo: "고른 항목을 앞에 있던 앱에 바로 붙여 넣기 (없으면 복사만)",
+                          reasonEn: "Paste the picked item into the app you were using (copies only without it)"),
+    ]
 
     // MARK: 동작
 

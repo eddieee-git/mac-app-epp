@@ -23,12 +23,9 @@ enum Localization {
 
     static let pairs: [(String, String)] = [
         // Epp 공통 설정 틀
-        ("권한", "Permissions"),
-        ("손쉬운 사용", "Accessibility"),
-        ("고른 항목을 앞에 있던 앱에 바로 붙여 넣는 데 필요해요. 없어도 클립보드에 복사는 돼요.",
-         "Needed to paste the item you pick right into the app you were using. Without it, Keepy still copies it to the clipboard."),
-        ("손쉬운 사용 권한 허용하기 (아래 일반 → 권한)", "Allow Accessibility (General → Permissions below)"),
-        ("평소처럼 복사하기. Keepy가 기록해 둬요.", "Copy as usual. Keepy keeps a record."),
+        ("손쉬운 사용 권한 허용하기 (Epp 설정 → 일반 → 권한)", "Allow Accessibility (Epp Settings → General → Permissions)"),
+        ("권한 열기", "Open Permissions"),
+        ("평소처럼 복사하기. Epp가 기록해 둬요.", "Copy as usual. Epp keeps a record."),
         ("%@로 기록을 열고 ↩로 붙여 넣기", "Open the history with %@ and press Return to paste"),
         ("메뉴", "the menu"),
         ("⌘1~9로 바로 고르고, ⌘P로 자주 쓰는 항목을 맨 위에 고정해요. 비밀번호 관리자에서 복사한 내용은 기록하지 않아요.",
@@ -88,7 +85,7 @@ enum Localization {
         ("모두 지우기", "Clear All"),
         ("고정한 항목까지 모두 지워져요. 되돌릴 수 없어요.", "Pinned items are cleared too. This can't be undone."),
         ("고르면 바로 붙여 넣기", "Paste right after picking"),
-        ("끄면 고른 항목을 클립보드에 복사만 하고, ⌘V는 직접 눌러요.", "When off, Keepy only copies the item you pick, and you press ⌘V yourself."),
+        ("끄면 고른 항목을 클립보드에 복사만 하고, ⌘V는 직접 눌러요.", "When off, Epp only copies the item you pick, and you press ⌘V yourself."),
         ("이 앱에서 복사한 내용은 기록하지 않아요", "Copies from these apps are not recorded"),
         ("한 줄에 번들 ID 하나씩 적어요. 비밀번호 관리자가 숨김 표시를 붙여 복사한 내용은 앱과 상관없이 기록하지 않아요.",
          "One bundle ID per line. Copies that password managers mark as concealed are never recorded, whatever the app."),

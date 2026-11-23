@@ -84,7 +84,7 @@ final class ModuleManager: ObservableObject {
     static func dataDirectory(for info: EppModuleInfo) -> URL {
         FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
             .appendingPathComponent(folderName, isDirectory: true)
-            .appendingPathComponent(info.name, isDirectory: true)
+            .appendingPathComponent(info.storageName, isDirectory: true)
     }
 
     /// 기능마다 따로 쓰는 UserDefaults 이름 (예: com.eddieee.Epp.keepy)
@@ -96,6 +96,7 @@ final class ModuleManager: ObservableObject {
         let defaults = UserDefaults(suiteName: Self.defaultsSuite(for: info)) ?? .standard
         return EppContext(moduleID: info.id, defaults: defaults, dataDirectory: directory,
                           openSettings: { [weak self] in self?.openSettings(info.id) },
+                          openPermissions: { [weak self] in self?.openSettings("general") },
                           hostStatusItems: { [weak self] in self?.hostStatusItems() ?? [] },
                           appName: Self.folderName)
     }
