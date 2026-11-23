@@ -54,6 +54,24 @@ enum SelfTest {
         expect((try? crypto.decrypt(plain)) == plain, "예전 평문은 그대로 읽음")
         expect((try? EppCrypto(testKey: SymmetricKey(size: .bits256)).decrypt(sealed)) == nil, "다른 키로는 못 풂")
 
+        print("[Epp] 빠른 검색")
+        let query = EppSearchQuery("  회의 메모 ")
+        expect(query.words == ["회의", "메모"], "낱말 나누기")
+        expect(query.matches("오늘 회의", "메모 정리") && !query.matches("오늘 회의"), "낱말이 모두 있어야 맞음(여러 글에 나뉘어도)")
+        expect(EppSearchQuery("CAFÉ").matches("cafe 가기"), "대소문자·악센트 무시")
+        expect(!EppSearchQuery("   ").matches("아무거나") && EppSearchQuery("").isEmpty, "빈 검색은 아무것도 안 맞음")
+        expect(EppSearchQuery("메모").snippet(String(repeating: "가", count: 50) + " 메모 끝")?.hasPrefix("…") == true, "찾은 곳 앞뒤만 보여 줌")
+
+        print("[Epp] 설정 옮기기")
+        let snap = SettingsBackup.snapshot(main: ["enabledModules": ["keepy"], "NSWindow Frame x": "1", "lastUpdateCheck": Date()],
+                                           modules: ["keepy": ["historyLimit": 500, "NSStatusItem Visible": true]])
+        let decoded = (try? SettingsBackup.encode(snap)).flatMap(SettingsBackup.decode)
+        expect(decoded?.main["enabledModules"] as? [String] == ["keepy"], "켠 기능을 옮김")
+        expect(decoded?.main["NSWindow Frame x"] == nil && decoded?.main["lastUpdateCheck"] == nil, "창 자리·업데이트 시각은 옮기지 않음")
+        expect(decoded?.modules["keepy"]?["historyLimit"] as? Int == 500 && decoded?.modules["keepy"]?["NSStatusItem Visible"] == nil,
+               "기능 설정을 옮김")
+        expect(SettingsBackup.decode(Data("아님".utf8)) == nil, "Epp 설정 파일이 아니면 읽지 않음")
+
         var ok = failures == 0
         for type in ModuleList.all {
             print("[\(type.info.name)]")

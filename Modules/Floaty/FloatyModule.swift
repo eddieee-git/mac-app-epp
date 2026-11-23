@@ -741,6 +741,30 @@ public final class FloatyModule: NSObject, EppModule, NSMenuDelegate {
     }
 
     /// epp://floaty/new — 새 스티커, epp://floaty/manager — 스티커 관리, epp://floaty/toggle — 모두 표시/숨기기
+    /// 빠른 검색: 제목과 본문에서 찾는다. 잠근 스티커는 찾지 않는다. 고르면 그 스티커를 앞으로 가져온다.
+    public func search(_ query: EppSearchQuery) -> [EppSearchResult] {
+        store.activeNotes.filter { !$0.isLocked && query.matches($0.title, $0.text) }
+            .sorted { $0.modifiedAt > $1.modifiedAt }
+            .prefix(30)
+            .map { note in
+                EppSearchResult(id: "floaty." + note.id.uuidString, title: note.displayTitle,
+                                detail: query.snippet(note.text), symbol: "note.text", date: note.modifiedAt) { [weak self] in
+                    self?.reveal(note.id)
+                }
+            }
+    }
+
+    /// 다른 기능의 부탁: 이 글로 새 스티커를 만든다(클립보드 기록의 "스티커로 만들기").
+    public func handle(request: EppRequest) -> Bool {
+        switch request {
+        case .makeSticky(let text):
+            SoundEffect.newNote.play()
+            present(makeNote(), body: NSAttributedString(string: text, attributes: FormattingTextView.defaultAttributes))
+            NSApp.activate(ignoringOtherApps: true)
+            return true
+        }
+    }
+
     public func handle(url: URL) {
         switch url.pathComponents.dropFirst().first ?? "new" {
         case "manager": showManager()

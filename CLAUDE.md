@@ -195,6 +195,11 @@ Modules/<이름>/     기능 하나 (예: Modules/Keepy)
 - **메뉴바 아이콘을 늘리지 않는다**: 짧은 상태(타이머 남은 시간 등)는 `context.setStatusText(_:)`로 Epp 아이콘 옆에 붙인다.
   따로 항목이 꼭 필요하면 설정으로 고르게 한다(타이머의 "Epp 아이콘과 따로 보이기", 기본 끔). 시험: `-debugStatusText "⏰04:59"`.
 - **처음 켤 때**: 켠 기능이 없으면 일반 맨 위에 환영 문구. 일반 목록에서 켜면 쪽이 넘어가지 않고 그 줄에 "설정 열기"가 생긴다.
+- **빠른 검색**: 기능은 `search(_ query: EppSearchQuery) -> [EppSearchResult]`로 맞는 내용을 최근 것부터 돌려준다(잠근 것·비밀은 빼고).
+  본체 `QuickSearch`(⌃⌥E, 일반 → 빠른 검색)가 기능마다 6개씩 모아 보여 준다. 창은 앞의 앱을 그대로 두는 패널. 시험: `-debugQuickSearch "말"`.
+- **기능 잇기**: `context.send(EppRequest)`로 다른 기능에 부탁하고 `handle(request:)`로 받는다(예: `.makeSticky(text:)` → 스티커).
+  받을 기능이 꺼져 있으면 본체가 그 기능 설정(켜기 버튼)을 연다.
+- **설정 옮기기**: `SettingsBackup`이 본체·기능 UserDefaults를 `.eppsettings`(plist)로 내보내고 가져온다. `NS…`·업데이트 시각 같은 키는 뺀다.
 - **메뉴**: `fillMenu`에는 주 동작(열기) → 고유 항목만. 본체가 끝에 "시작 안내", "<이름> 설정…"을 붙인다.
 - **앱 메뉴**(화면 맨 위 왼쪽): 기능은 `mainMenus()`로 `EppMainMenu(.file/.edit/.format/.window, 메뉴)`만 넘긴다.
   본체가 Epp · 파일 · 편집 · 서식 · 윈도우 순서로 합치고, 같은 동작·같은 키는 한 번만 넣는다. `NSApp.mainMenu`를 직접 바꾸지 않는다.

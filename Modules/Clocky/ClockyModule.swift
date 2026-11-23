@@ -303,6 +303,27 @@ public final class ClockyModule: NSObject, EppModule, NSMenuDelegate {
     }
 
     /// epp://clocky/show — 시계 창, epp://clocky/list — 전체 목록, epp://clocky/toggle — 고른 타이머 시작/일시정지
+    /// 빠른 검색: 타이머·알람 이름에서 찾는다. 고르면 시계 창에서 그 항목을 고른다.
+    public func search(_ query: EppSearchQuery) -> [EppSearchResult] {
+        let store = window.store
+        let timers = store.timers.filter { query.matches(store.displayName(of: $0)) }.map { timer in
+            EppSearchResult(id: "clocky.t." + timer.id.uuidString, title: store.displayName(of: timer),
+                            detail: L("타이머") + " · " + clockText(timer.duration), symbol: "timer") { [weak self] in
+                self?.window.store.selectedTimerID = timer.id
+                self?.window.show()
+            }
+        }
+        let alarms = store.alarms.filter { query.matches(store.displayName(of: $0)) }.map { alarm in
+            EppSearchResult(id: "clocky.a." + alarm.id.uuidString, title: store.displayName(of: alarm),
+                            detail: L("알람") + " · " + String(format: "%02d:%02d", alarm.minutes / 60, alarm.minutes % 60),
+                            symbol: "alarm") { [weak self] in
+                self?.window.store.selectedAlarmID = alarm.id
+                self?.window.show()
+            }
+        }
+        return timers + alarms
+    }
+
     public func handle(url: URL) {
         switch url.pathComponents.dropFirst().first ?? "show" {
         case "list": showList()

@@ -80,6 +80,9 @@ struct HistoryView: View {
                                 Button(vm.copyOnly ? L("복사") : L("붙여 넣기")) { onPick(item, false) }
                                 Button(vm.copyOnly ? L("서식 없이 복사") : L("서식 없이 붙여 넣기")) { onPick(item, true) }
                                 Divider()
+                                if item.kind == .text, let makeSticky = vm.makeSticky {
+                                    Button(L("스티커로 만들기")) { _ = makeSticky(item) }
+                                }
                                 Button(item.pinned ? L("고정 풀기") : L("고정")) { vm.store.togglePin(item.id) }
                                 Button(L("삭제"), role: .destructive) { vm.delete(item) }
                             }

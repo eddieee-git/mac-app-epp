@@ -71,6 +71,28 @@ final class ModuleManager: ObservableObject {
 
     func module(id: String) -> (any EppModule)? { running[id] }
 
+    /// 기능끼리의 부탁을 켜져 있는 다른 기능에 차례로 건넨다. 누군가 처리하면 true.
+    func send(_ request: EppRequest, from sender: String) -> Bool {
+        for type in enabledTypes where type.info.id != sender {
+            if running[type.info.id]?.handle(request: request) == true { return true }
+        }
+        // 받을 기능이 꺼져 있으면 그 기능 설정(켜기 버튼이 있는 쪽)을 연다.
+        switch request {
+        case .makeSticky: openSettings("floaty")
+        }
+        return false
+    }
+
+    /// 빠른 검색: 켠 기능마다 맞는 것을 모은다(기능마다 최대 `limit`개, 기능 목록 순서).
+    func search(_ query: EppSearchQuery, limit: Int = 6) -> [(info: EppModuleInfo, results: [EppSearchResult])] {
+        guard !query.isEmpty else { return [] }
+        return enabledTypes.compactMap { type in
+            guard let module = running[type.info.id] else { return nil }
+            let results = Array(module.search(query).prefix(limit))
+            return results.isEmpty ? nil : (type.info, results)
+        }
+    }
+
     #if DEBUG
     /// 점검용(-debugCycleModules): 기능을 여러 번 켰다 껐다 하고, 끈 뒤에 남은 것이 없는지 본다.
     /// 문제를 한 줄씩 돌려준다(비어 있으면 통과). 켠 목록(설정)은 바꾸지 않는다.
@@ -144,6 +166,7 @@ final class ModuleManager: ObservableObject {
                           openPermissions: { [weak self] in self?.openSettings("general") },
                           hostStatusItems: { [weak self] in self?.hostStatusItems() ?? [] },
                           appName: Self.folderName,
-                          setStatusText: { [weak self] text in self?.setStatusText(info.id, text) })
+                          setStatusText: { [weak self] text in self?.setStatusText(info.id, text) },
+                          send: { [weak self] request in self?.send(request, from: info.id) ?? false })
     }
 }

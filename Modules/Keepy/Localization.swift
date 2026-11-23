@@ -41,6 +41,7 @@ enum Localization {
         ("서식 없이 붙여 넣기", "Paste as Plain Text"),
         ("서식 없이", "Plain text"),
         ("고정", "Pin"),
+        ("스티커로 만들기", "Make Sticky"),
         ("고정 풀기", "Unpin"),
         ("삭제", "Delete"),
         ("%ld개", "%ld items"),

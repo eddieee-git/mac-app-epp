@@ -167,13 +167,16 @@ private struct SettingsView: View {
     /// 이 기능의 전역 단축키 중 켠 다른 기능과 같은 키. 그 기능의 단축키 탭 위에 알린다.
     static func shortcutClashes(of id: String, manager: ModuleManager) -> [String] {
         guard let mine = manager.module(id: id)?.globalShortcuts(), !mine.isEmpty else { return [] }
-        let others = manager.enabledTypes.filter { $0.info.id != id }.flatMap { type in
-            (manager.module(id: type.info.id)?.globalShortcuts() ?? []).map { (type.info, $0) }
+        var others = manager.enabledTypes.filter { $0.info.id != id }.flatMap { type in
+            (manager.module(id: type.info.id)?.globalShortcuts() ?? []).map { (type.info.name, $0) }
+        }
+        if let combo = QuickSearch.combo {
+            others.append(("Epp", EppShortcutInfo(title: L("빠른 검색 열기"), keys: combo.displayText)))
         }
         return mine.flatMap { shortcut in
-            others.filter { $0.1.keys == shortcut.keys }.map { info, other in
+            others.filter { $0.1.keys == shortcut.keys }.map { name, other in
                 L("\"%@\" (%@) — %@의 \"%@\"와 같은 키예요. 먼저 등록한 기능만 동작해요.",
-                  shortcut.title, shortcut.keys, info.name, other.title)
+                  shortcut.title, shortcut.keys, name, other.title)
             }
         }
     }
@@ -218,8 +221,8 @@ private struct GeneralPage: View {
     /// 설정 검색에서 이 쪽을 찾게 할 설정 이름들
     static var keywords: [String] {
         [L("기능"), L("권한"), EppPermission.accessibility.title, EppPermission.screenRecording.title,
-         L("로그인 시 실행"), L("Dock에 아이콘 보이기"), L("언어"),
-         L("업데이트"), L("문제 해결"), L("진단 로그 남기기"), L("데이터 폴더"), L("정보")]
+         L("빠른 검색"), L("빠른 검색 열기"), L("로그인 시 실행"), L("Dock에 아이콘 보이기"), L("언어"),
+         L("업데이트"), L("문제 해결"), L("진단 로그 남기기"), L("데이터 폴더"), L("설정 옮기기"), L("설정 내보내기…"), L("설정 가져오기…"), L("정보")]
     }
 
     @ObservedObject var manager: ModuleManager
@@ -282,6 +285,16 @@ private struct GeneralPage: View {
             permissionSection
 
             Section {
+                EppShortcutRow(L("빠른 검색 열기"), combo: Binding(get: { QuickSearch.combo }, set: { QuickSearch.combo = $0 }),
+                               defaultCombo: QuickSearch.defaultCombo)
+            } header: {
+                Text(L("빠른 검색"))
+            } footer: {
+                Text(L("켠 기능의 내용(클립보드 기록, 스티커, 캡처 속 글자, 타이머·알람)을 한 번에 찾아요. 잠근 스티커는 찾지 않아요."))
+                    .font(.caption).foregroundStyle(.secondary)
+            }
+
+            Section {
                 Toggle(L("로그인 시 실행"), isOn: $launchAtLogin)
                     .onChange(of: launchAtLogin) { _, enabled in setLaunchAtLogin(enabled) }
                 VStack(alignment: .leading, spacing: 2) {
@@ -330,6 +343,20 @@ private struct GeneralPage: View {
                 Text(L("문제 해결"))
             } footer: {
                 Text(L("진단 로그는 권한·동작 문제를 찾을 때만 켜요. 모든 기능이 한 파일(~/Library/Logs)에 적고, 복사한 내용 같은 개인 내용은 적지 않아요. 끄면 파일을 지워요."))
+                    .font(.caption).foregroundStyle(.secondary)
+            }
+
+            Section {
+                LabeledContent(L("설정 파일")) {
+                    HStack {
+                        Button(L("설정 내보내기…")) { SettingsBackup.exportWithPanel() }
+                        Button(L("설정 가져오기…")) { SettingsBackup.importWithPanel() }
+                    }
+                }
+            } header: {
+                Text(L("설정 옮기기"))
+            } footer: {
+                Text(L("켠 기능·단축키·테마 같은 설정을 파일 하나로 옮겨요(새 Mac 등). 클립보드 기록·스티커·캡처 같은 내용은 들어가지 않아요. 내용은 위의 데이터 폴더를 복사해요."))
                     .font(.caption).foregroundStyle(.secondary)
             }
 

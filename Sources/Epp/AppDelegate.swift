@@ -33,6 +33,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, UNUser
     let manager: ModuleManager
     private let settingsWindow: SettingsWindowController
     private var statusItem: NSStatusItem!
+    private lazy var quickSearch = QuickSearch(manager: manager)
 
     init(manager: ModuleManager) {
         self.manager = manager
@@ -76,6 +77,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, UNUser
         statusItem.button?.toolTip = solo.map { "\($0.name) (Epp)" } ?? "Epp"
 
         manager.startEnabled()
+        if manager.soloID == nil {
+            quickSearch.registerHotKey()
+            NotificationCenter.default.addObserver(forName: QuickSearch.hotKeyChanged, object: nil, queue: .main) { [weak self] _ in
+                MainActor.assumeIsolated { self?.quickSearch.registerHotKey() }
+            }
+        }
         rebuildMainMenu()
         if AppUpdater.shouldRun { AppUpdater.shared.start() }
 
@@ -86,6 +93,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, UNUser
         // -debugStatusText "⏰04:59" : 타이머처럼 Epp 아이콘 옆에 글을 붙여 본다.
         if let text = UserDefaults.standard.string(forKey: "debugStatusText") {
             setStatusText(text, for: "clocky")
+        }
+        // -debugQuickSearch "찾을 말" : 빠른 검색을 그 말로 띄운다(화면 확인용).
+        if let text = UserDefaults.standard.string(forKey: "debugQuickSearch") {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1) { self.quickSearch.show(query: text) }
         }
         // -debugCryptoCheck <account> : 그 이름으로 키를 만들어 암호화·풀기를 해 보고 결과를 출력한다(키는 남겨 둠 — 확인 뒤 지운다).
         if let account = UserDefaults.standard.string(forKey: "debugCryptoCheck") {
@@ -202,6 +213,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, UNUser
 
     @objc func openSettings() { showSettings(page: nil) }
 
+    @objc private func openQuickSearch() {
+        // 메뉴가 닫힌 뒤에 패널이 키 입력을 받게 한 박자 늦춘다.
+        DispatchQueue.main.async { self.quickSearch.show() }
+    }
+
     func showSettings(page: String?) { settingsWindow.show(page: page) }
 
     // MARK: 메뉴바 메뉴
@@ -231,6 +247,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, UNUser
             let empty = menu.addItem(withTitle: L("켠 기능이 없어요"), action: nil, keyEquivalent: "")
             empty.isEnabled = false
             menu.addItem(withTitle: L("기능 켜기…"), action: #selector(openSettings), keyEquivalent: "").target = self
+        }
+        if !types.isEmpty {
+            let search = menu.addItem(withTitle: L("빠른 검색…"), action: #selector(openQuickSearch), keyEquivalent: "")
+            search.target = self
+            search.image = NSImage(systemSymbolName: "magnifyingglass", accessibilityDescription: nil)
+            if let combo = QuickSearch.combo {
+                search.keyEquivalent = combo.menuKey
+                search.keyEquivalentModifierMask = combo.menuModifiers
+            }
+            menu.addItem(.separator())
         }
         for type in types {
             guard let module = manager.module(id: type.info.id) else { continue }

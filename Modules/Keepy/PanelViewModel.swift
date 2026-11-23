@@ -7,6 +7,8 @@ final class PanelViewModel: ObservableObject {
         didSet { if query != oldValue { selection = 0 } }
     }
     @Published var selection = 0
+    /// 글 항목을 새 스티커로 만든다. 스티커 기능이 꺼져 있으면 false(메뉴에 안 보임 대신 알림).
+    var makeSticky: ((ClipItem) -> Bool)?
     /// 값이 바뀌면 검색창에 다시 포커스를 준다.
     @Published private(set) var focusRequest = 0
     /// 아래 줄에 잠깐 보여 줄 알림 (예: 삭제했어요 · ⌘Z 되돌리기)

@@ -70,6 +70,13 @@ public protocol EppModule: AnyObject {
     /// 지금 등록한 전역 단축키(어디서나 동작하는 키). 켠 다른 기능과 겹치면 이 기능의 단축키 탭 위에 알린다.
     func globalShortcuts() -> [EppShortcutInfo]
 
+    /// Epp 빠른 검색. 이 기능의 내용 중 맞는 것을 최근 것부터 돌려준다(본체가 기능마다 몇 개만 보여 준다).
+    /// 개인 내용 중 잠근 것(잠근 스티커 등)은 돌려주지 않는다.
+    func search(_ query: EppSearchQuery) -> [EppSearchResult]
+
+    /// 다른 기능이 보낸 부탁(`context.send`). 처리했으면 true.
+    func handle(request: EppRequest) -> Bool
+
     /// 이 기능이 쓰는 macOS 권한. 권한은 Epp 일반 → 권한 한 곳에서 다루고, 기능 설정에는 권한 칸을 두지 않는다.
     static var permissionNeeds: [EppPermissionNeed] { get }
 
@@ -85,6 +92,8 @@ public extension EppModule {
     func mainMenus() -> [EppMainMenu] { [] }
     func handleNotification(identifier: String) {}
     func shouldQuit() -> Bool { true }
+    func search(_ query: EppSearchQuery) -> [EppSearchResult] { [] }
+    func handle(request: EppRequest) -> Bool { false }
 }
 
 /// 본체가 기능에 넘겨주는 것: 그 기능만 쓰는 설정 저장소와 데이터 폴더, 본체 동작.
@@ -115,12 +124,16 @@ public final class EppContext {
     /// Epp 메뉴바 아이콘 옆에 짧은 글(예: 타이머 남은 시간)을 붙인다. nil이면 지운다. 기능을 끄면 본체가 지운다.
     /// 메뉴바 아이콘을 따로 만들지 않아도 돼서 아이콘이 늘지 않는다.
     public let setStatusText: (String?) -> Void
+    /// 다른 기능에 부탁한다(예: 스티커 만들기). 받을 기능이 꺼져 있으면 false.
+    public let send: (EppRequest) -> Bool
 
     public init(moduleID: String, defaults: UserDefaults, dataDirectory: URL, openSettings: @escaping () -> Void,
                 openPermissions: @escaping () -> Void = {},
                 hostStatusItems: @escaping () -> [NSStatusItem] = { [] }, appName: String = "Epp",
-                setStatusText: @escaping (String?) -> Void = { _ in }) {
+                setStatusText: @escaping (String?) -> Void = { _ in },
+                send: @escaping (EppRequest) -> Bool = { _ in false }) {
         self.setStatusText = setStatusText
+        self.send = send
         self.moduleID = moduleID
         self.openPermissions = openPermissions
         self.defaults = defaults

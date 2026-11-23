@@ -472,6 +472,22 @@ public final class GrabbyModule: NSObject, EppModule {
         }
     }
 
+    /// 빠른 검색: 캡처의 메모와 인식한 글자에서 찾는다. 고르면 탭 창에서 그 캡처를 연다.
+    public func search(_ query: EppSearchQuery) -> [EppSearchResult] {
+        CaptureStore.shared.items.filter { query.matches($0.note, $0.text) }
+            .sorted { $0.date > $1.date }
+            .prefix(30)
+            .map { item in
+                let title = item.note?.isEmpty == false ? item.note! : (query.snippet(item.text, length: 60) ?? L("캡처"))
+                return EppSearchResult(id: "grabby." + item.id.uuidString, title: title,
+                                       detail: item.note?.isEmpty == false ? query.snippet(item.text) : "\(item.width)×\(item.height)",
+                                       symbol: "camera.viewfinder", date: item.date) { [weak self] in
+                    self?.openLibrary()
+                    self?.library?.select(item.id)
+                }
+            }
+    }
+
     /// epp://grabby/area — 영역 캡처(직접 영역을 골라야 찍힘), epp://grabby/library — 탭 창.
     /// 전체 화면 캡처는 주소로 열지 않는다. 웹페이지나 다른 앱이 묻지 않고 화면을 찍게 되기 때문이다.
     public func handle(url: URL) {

@@ -52,6 +52,11 @@ public final class KeepyModule: EppModule {
 
         monitor.start()
         applyHotKey()
+        panel.viewModel.makeSticky = { [weak self] item in
+            guard let self else { return false }
+            self.panel.hide()
+            return self.context.send(.makeSticky(text: item.text))
+        }
         trimTimer = Timer.scheduledTimer(withTimeInterval: 3600, repeats: true) { [weak self] _ in
             MainActor.assumeIsolated { self?.store.trim() }
         }
@@ -72,6 +77,16 @@ public final class KeepyModule: EppModule {
     public func handle(url: URL) {
         let command = url.pathComponents.dropFirst().first ?? "show"
         if command == "show" { showPanel() } else { EppLog.write("클립보드", "모르는 주소 명령 무시: \(url.path)") }
+    }
+
+    /// 빠른 검색: 글과 파일 경로에서 찾는다. 고르면 앞의 앱에 붙여 넣는다(설정에 따라 복사만).
+    public func search(_ query: EppSearchQuery) -> [EppSearchResult] {
+        store.items.lazy.filter { $0.kind != .image && query.matches($0.text) }.prefix(30).map { item in
+            EppSearchResult(id: "keepy." + item.id.uuidString, title: item.title,
+                            detail: [query.snippet(item.text), item.sourceAppName].compactMap { $0 }.joined(separator: " · "),
+                            symbol: item.kind == .file ? "doc" : (item.pinned ? "pin" : "doc.on.clipboard"),
+                            date: item.lastUsedAt) { [weak self] in self?.paste(item, plainText: false) }
+        }
     }
 
     public func settingsTabs() -> [EppSettingsTab] {
