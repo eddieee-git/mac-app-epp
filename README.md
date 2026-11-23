@@ -5,13 +5,14 @@
 <p align="center">Mac을 편하게 쓰는 작은 기능 모음 (Eddie's app)<br>메뉴바 아이콘 하나에서 필요한 기능만 켜서 써요.</p>
 
 > 아직 만드는 중이에요. 배포하지 않았고, 기존 단독 앱(Clocky, Floaty, Grabby, Keepy, Peeky)은 그대로 쓰면 돼요.
+> 같은 기능의 단독 앱과 Epp 기능을 함께 켜지 마세요(단축키와 메뉴바 아이콘이 겹쳐요).
 
 ## 들어 있는 기능
 
 | 기능 | 하는 일 | 상태 |
 |---|---|---|
 | **Keepy** | 복사한 내용을 모아 두고 다시 붙여 넣는 클립보드 기록 | 옮김 |
-| Peeky | 노치에 가려진 메뉴바 아이콘 꺼내 보기 | 옮길 예정 |
+| **Peeky** | 노치에 가려진 메뉴바 아이콘 꺼내 보기, 고른 아이콘 메뉴바에서 숨기기 | 옮김 |
 | Clocky | 넘김시계 타이머·알람·일정 알림 | 옮길 예정 |
 | Floaty | 플로팅 스티커 메모 | 옮길 예정 |
 | Grabby | 찍고, 그리고, 바로 붙여 넣는 화면 캡처 | 옮길 예정 |
@@ -22,7 +23,8 @@
 - 평소에는 Dock에 보이지 않아요. 설정에서 **Dock에 아이콘 보이기**를 켜면 일반 앱처럼 Dock에도 나와요.
 - 처음에는 모든 기능이 꺼져 있어요. **설정 → 일반 → 기능**에서 쓸 기능만 켜요.
 - 끈 기능은 아무 일도 하지 않아요. 단축키도 등록하지 않고, 클립보드도 보지 않아요.
-- 다른 도구(단축어 등)에서 `epp://keepy/show`로 Keepy 기록 창을 열 수 있어요.
+- Peeky는 켜면 그룹마다 메뉴바 아이콘이 따로 생겨요(Peeky가 하는 일이라서). 같은 동작은 Epp 메뉴의 **Peeky ▸**에도 있어요.
+- 다른 도구(단축어 등)에서 주소로 열 수 있어요: `epp://keepy/show`(Keepy 기록 창), `epp://peeky/open`(Peeky 바), `epp://peeky/arrange`(다시 정리).
 
 ## 설정
 
@@ -39,6 +41,12 @@
 - 기능마다 따로 저장해요: `~/Library/Application Support/Epp/<기능 이름>/`
 - 기존 단독 앱의 데이터(예: `~/Library/Application Support/Keepy`)는 읽지도 바꾸지도 않아요.
 
+## 권한
+
+- 손쉬운 사용: Keepy 바로 붙여 넣기, Peeky(필수). 시스템 설정 → 개인정보 보호 및 보안 → 손쉬운 사용에서 **Epp**를 켜요.
+- 화면 기록(선택): Peeky가 실제 아이콘 모양을 보여 줄 때. 켠 뒤 Epp를 다시 열어야 해요.
+- 권한은 Epp 하나에 주는 거라 기존 단독 앱에 준 권한과는 따로예요.
+
 ## 알려진 제한
 
 - Apple 실리콘 Mac, macOS 14 이상.
@@ -48,4 +56,4 @@
 
 ## English
 
-Epp (Eddie's app) gathers small Mac menu bar tools under one icon. Turn on only the features you want in Settings → General → Features; features that are off do nothing. Work in progress: only Keepy (clipboard history) has been moved in so far.
+Epp (Eddie's app) gathers small Mac menu bar tools under one icon. Turn on only the features you want in Settings → General → Features; features that are off do nothing. Work in progress: Keepy (clipboard history) and Peeky (menu bar icons behind the notch) have been moved in so far.

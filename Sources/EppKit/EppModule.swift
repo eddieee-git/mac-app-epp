@@ -65,10 +65,17 @@ public final class EppContext {
     public let dataDirectory: URL
     /// 설정 창을 열고 이 기능을 보여 준다.
     public let openSettings: () -> Void
+    /// Epp 본체의 메뉴바 아이콘. 메뉴바 아이콘을 숨기는 기능(Peeky)이 이것까지 숨기지 않게 한다.
+    public let hostStatusItems: () -> [NSStatusItem]
+    /// 진단 로그 같은 파일 이름 앞에 붙일 앱 이름 ("Epp" 또는 "Epp Dev")
+    public let appName: String
 
-    public init(defaults: UserDefaults, dataDirectory: URL, openSettings: @escaping () -> Void) {
+    public init(defaults: UserDefaults, dataDirectory: URL, openSettings: @escaping () -> Void,
+                hostStatusItems: @escaping () -> [NSStatusItem] = { [] }, appName: String = "Epp") {
         self.defaults = defaults
         self.dataDirectory = dataDirectory
         self.openSettings = openSettings
+        self.hostStatusItems = hostStatusItems
+        self.appName = appName
     }
 }

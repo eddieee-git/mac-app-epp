@@ -38,6 +38,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         settingsWindow = SettingsWindowController(manager: manager)
         super.init()
         manager.openSettings = { [weak self] id in self?.showSettings(page: id) }
+        manager.hostStatusItems = { [weak self] in [self?.statusItem].compactMap { $0 } }
     }
 
     private var hasLaunchedBefore: Bool {
@@ -48,7 +49,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.mainMenu = makeMainMenu()
 
+        // 새 아이콘은 macOS가 왼쪽 끝(노치 쪽)에 놓아 가려질 수 있다. 처음 한 번만 오른쪽 가까이에 둔다.
+        // 값은 오른쪽 끝에서 잰 거리. 사용자가 옮긴 뒤에는 macOS가 바꾼 값을 그대로 둔다.
+        let positionKey = "NSStatusItem Preferred Position EppMain"
+        if UserDefaults.standard.object(forKey: positionKey) == nil {
+            UserDefaults.standard.set(170.0, forKey: positionKey)
+        }
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
+        // 사용자가 ⌘로 끌어 옮긴 자리를 macOS가 기억하게 한다.
+        statusItem.autosaveName = "EppMain"
         let menu = NSMenu()
         menu.delegate = self
         statusItem.menu = menu

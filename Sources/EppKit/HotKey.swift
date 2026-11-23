@@ -102,6 +102,11 @@ public final class HotKey {
         Self.actions[id] = action
     }
 
+    /// 키 코드와 Carbon 보조 키로 바로 등록한다(화면에 보여 줄 키 이름이 필요 없을 때).
+    public convenience init?(keyCode: UInt32, modifiers: UInt32, action: @escaping () -> Void) {
+        self.init(combo: KeyCombo(keyCode: keyCode, modifiers: modifiers, key: ""), action: action)
+    }
+
     deinit {
         if let hotKeyRef { UnregisterEventHotKey(hotKeyRef) }
         let id = id

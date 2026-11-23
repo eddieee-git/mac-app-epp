@@ -5,7 +5,7 @@ import PackageDescription
 // 1. Modules/<이름>/ 폴더를 만들고 EppModule 약속을 따르는 클래스를 넣는다.
 // 2. 아래 `modules`에 이름을 한 줄 더한다.
 // 3. Sources/Epp/ModuleList.swift의 목록에 한 줄 더한다.
-let modules = ["Keepy"]
+let modules = ["Keepy", "Peeky"]
 
 let package = Package(
     name: "Epp",

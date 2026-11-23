@@ -76,9 +76,22 @@ Modules/<이름>/     기능 하나 (예: Modules/Keepy)
 - 시작 안내에서 업데이트 칸을 뺐다. "설정 열기"는 Epp 설정의 Keepy를 연다.
 - 단축키 겹침 경고에 단독 Keepy 앱(`com.eddieee.Keepy`)도 넣었다.
 
+## Peeky (Modules/Peeky)
+
+원본: ../Peeky 0.3.4 (커밋 9911bf1). 바뀐 점:
+- `AppDelegate` → `PeekyModule`. 그룹 아이콘·‹ › 버튼·구분선은 Peeky가 직접 만든다(Peeky의 일). `stop()`에서 모두 지우고 구분선은 펼친 뒤 지운다.
+- 자기 `HotKey.swift`를 지우고 EppKit `HotKey(keyCode:modifiers:action:)`을 쓴다. **기능마다 Carbon 처리기를 따로 두면 번호가 겹쳐 다른 기능의 단축키가 불린다.**
+- `Preferences.shared`, `PeekyStorage.defaults`·`logPath`는 `PeekyModule.init`에서 Epp가 준 값으로 채운다.
+  `NSStatusItem Preferred Position …`(`StatusItemPlacement`)만은 macOS가 앱의 기본 UserDefaults에서 읽으므로 그대로 둔다.
+- 숨기기가 Epp 아이콘까지 밀어내지 않게 `context.hostStatusItems()`를 보호 목록에 넣는다. Epp 아이콘은 `autosaveName = "EppMain"`, 처음 자리는 오른쪽 끝에서 170.
+- 오른쪽 클릭 메뉴의 "Peeky 종료"와 업데이트 항목을 뺐다(종료는 Epp 메뉴). 설정에서 로그인·언어·업데이트·정보를 뺐다.
+- 진단 로그: `~/Library/Logs/<Epp 이름> Peeky.log`.
+- `Preferences.shared`가 `Preferences!`라서 `let prefs = Preferences.shared`처럼 쓰면 Optional이 된다. 타입을 적는다(`let prefs: Preferences = …`).
+
 ## 남은 일
 
-- [ ] Peeky, Clocky, Floaty, Grabby 옮기기
+- [ ] Clocky, Floaty, Grabby 옮기기
+- [ ] Peeky를 실제로 켜서 확인(권한, 그룹 아이콘, 숨기기·정리, 끄고 켤 때 아이콘이 깨끗이 사라지는지)
 - [ ] 공통 업데이트(AppUpdater) 붙이기: GitHub 저장소, 서명 키, dmg 만들기, release.sh
 - [ ] 기존 단독 앱의 데이터 가져오기(처음 켤 때 물어보고 복사)
 - [ ] 모든 기능의 단축키를 한 화면에서 보기, 겹침 알리기

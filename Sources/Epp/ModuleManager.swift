@@ -15,6 +15,8 @@ final class ModuleManager: ObservableObject {
     private(set) var running: [String: any EppModule] = [:]
     /// 설정 창을 열어 해당 기능을 보여 준다(본체가 채운다).
     var openSettings: (String?) -> Void = { _ in }
+    /// 본체의 메뉴바 아이콘(본체가 채운다).
+    var hostStatusItems: () -> [NSStatusItem] = { [] }
 
     init(soloID: String?) {
         self.soloID = soloID
@@ -87,6 +89,8 @@ final class ModuleManager: ObservableObject {
         try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         let defaults = UserDefaults(suiteName: Self.defaultsSuite(for: info)) ?? .standard
         return EppContext(defaults: defaults, dataDirectory: directory,
-                          openSettings: { [weak self] in self?.openSettings(info.id) })
+                          openSettings: { [weak self] in self?.openSettings(info.id) },
+                          hostStatusItems: { [weak self] in self?.hostStatusItems() ?? [] },
+                          appName: Self.folderName)
     }
 }
