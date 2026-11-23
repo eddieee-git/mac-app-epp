@@ -23,14 +23,19 @@ public final class KeepyModule: EppModule {
         self?.paste(item, plainText: plainText)
     }
     private var hotKey: HotKey?
+    /// 오래된 기록을 지우려고 한 시간마다 본다.
+    private var trimTimer: Timer?
     private var cancellables = Set<AnyCancellable>()
 
     public required init(context: EppContext) {
         self.context = context
         // 기능 안 여러 곳이 AppSettings.shared를 쓰므로 Epp가 준 저장소로 먼저 바꿔 둔다.
-        settings = AppSettings(defaults: context.defaults)
+        let settings = AppSettings(defaults: context.defaults)
+        self.settings = settings
         AppSettings.shared = settings
-        store = HistoryStore(directory: context.dataDirectory)
+        store = HistoryStore(directory: context.dataDirectory,
+                             limit: { settings.historyLimit },
+                             maxAgeDays: { settings.historyMaxAgeDays })
     }
 
     public func start() {
@@ -39,17 +44,23 @@ public final class KeepyModule: EppModule {
             .dropFirst()
             .sink { [weak self] _ in DispatchQueue.main.async { self?.applyHotKey() } }
             .store(in: &cancellables)
-        settings.$historyLimit
-            .dropFirst()
+        settings.$historyLimit.map { _ in () }
+            .merge(with: settings.$historyMaxAgeDays.map { _ in () })
+            .dropFirst(2)
             .sink { [weak self] _ in DispatchQueue.main.async { self?.store.trim() } }
             .store(in: &cancellables)
 
         monitor.start()
         applyHotKey()
+        trimTimer = Timer.scheduledTimer(withTimeInterval: 3600, repeats: true) { [weak self] _ in
+            MainActor.assumeIsolated { self?.store.trim() }
+        }
     }
 
     public func stop() {
         cancellables.removeAll()
+        trimTimer?.invalidate()
+        trimTimer = nil
         hotKey = nil
         monitor.stop()
         panel.hide()
@@ -60,7 +71,7 @@ public final class KeepyModule: EppModule {
     /// epp://keepy/show — 다른 도구(단축어 등)에서 기록 창을 연다.
     public func handle(url: URL) {
         let command = url.pathComponents.dropFirst().first ?? "show"
-        if command == "show" { showPanel() }
+        if command == "show" { showPanel() } else { EppLog.write("클립보드", "모르는 주소 명령 무시: \(url.path)") }
     }
 
     public func settingsTabs() -> [EppSettingsTab] {

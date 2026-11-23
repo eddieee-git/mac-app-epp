@@ -1,5 +1,6 @@
 import AppKit
 import Carbon
+import CryptoKit
 import EppKit
 
 /// `scripts/test.sh`가 돌리는 자체 점검. 본체를 점검한 뒤 모든 기능의 점검을 차례로 돌린다.
@@ -36,6 +37,22 @@ enum SelfTest {
         let combo = KeyCombo(keyCode: UInt32(kVK_ANSI_V), modifiers: UInt32(controlKey | optionKey), key: "V")
         expect(combo.displayText == "⌃⌥V", "단축키 표시")
         expect(combo.menuKey == "v" && combo.menuModifiers == [.control, .option], "메뉴에 쓰는 키")
+
+        print("[Epp] epp:// 주소 몰림 막기")
+        var gate = RateGate(limit: 5, per: 10)
+        let start = Date()
+        let passed = (0..<8).filter { _ in gate.allow(now: start) }.count
+        expect(passed == 5, "10초에 5번까지만 받음 (\(passed))")
+        expect(gate.allow(now: start.addingTimeInterval(10)), "시간이 지나면 다시 받음")
+
+        print("[Epp] 암호화 (공통)")
+        let crypto = EppCrypto(testKey: SymmetricKey(size: .bits256))
+        let plain = Data("비밀 내용".utf8)
+        let sealed = (try? crypto.encrypt(plain)) ?? Data()
+        expect(EppCrypto.isEncrypted(sealed) && sealed.range(of: plain) == nil, "암호화하면 원문이 보이지 않음")
+        expect((try? crypto.decrypt(sealed)) == plain, "같은 키로 풂")
+        expect((try? crypto.decrypt(plain)) == plain, "예전 평문은 그대로 읽음")
+        expect((try? EppCrypto(testKey: SymmetricKey(size: .bits256)).decrypt(sealed)) == nil, "다른 키로는 못 풂")
 
         var ok = failures == 0
         for type in ModuleList.all {

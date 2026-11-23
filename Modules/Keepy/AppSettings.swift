@@ -28,6 +28,9 @@ final class AppSettings: ObservableObject {
 
     static let historyLimits = [50, 100, 200, 500, 1000]
     static let defaultHistoryLimit = 200
+    /// 고정하지 않은 기록을 며칠 지나면 지울지. 0은 지우지 않음.
+    static let historyMaxAges = [1, 7, 30, 90, 0]
+    static let defaultHistoryMaxAgeDays = 30
 
     /// 비밀번호 관리자 등 기록하지 않을 앱 (번들 ID, 줄바꿈 구분)
     static let defaultIgnoredApps = [
@@ -41,6 +44,7 @@ final class AppSettings: ObservableObject {
     private let defaults: UserDefaults
 
     @Published var historyLimit: Int { didSet { defaults.set(historyLimit, forKey: "historyLimit") } }
+    @Published var historyMaxAgeDays: Int { didSet { defaults.set(historyMaxAgeDays, forKey: "historyMaxAgeDays") } }
     @Published var pasteAutomatically: Bool { didSet { defaults.set(pasteAutomatically, forKey: "pasteAutomatically") } }
     @Published var panelPosition: PanelPosition { didSet { defaults.set(panelPosition.rawValue, forKey: "panelPosition") } }
     @Published var ignoredApps: String { didSet { defaults.set(ignoredApps, forKey: "ignoredApps") } }
@@ -58,6 +62,7 @@ final class AppSettings: ObservableObject {
         self.defaults = defaults
         let limit = defaults.integer(forKey: "historyLimit")
         historyLimit = limit > 0 ? limit : Self.defaultHistoryLimit
+        historyMaxAgeDays = defaults.object(forKey: "historyMaxAgeDays") as? Int ?? Self.defaultHistoryMaxAgeDays
         pasteAutomatically = defaults.object(forKey: "pasteAutomatically") as? Bool ?? true
         panelPosition = defaults.string(forKey: "panelPosition").flatMap(PanelPosition.init) ?? .mouse
         ignoredApps = defaults.string(forKey: "ignoredApps") ?? Self.defaultIgnoredApps

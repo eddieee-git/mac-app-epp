@@ -472,12 +472,13 @@ public final class GrabbyModule: NSObject, EppModule {
         }
     }
 
-    /// epp://grabby/area — 영역 캡처, epp://grabby/full — 전체 화면, epp://grabby/library — 탭 창
+    /// epp://grabby/area — 영역 캡처(직접 영역을 골라야 찍힘), epp://grabby/library — 탭 창.
+    /// 전체 화면 캡처는 주소로 열지 않는다. 웹페이지나 다른 앱이 묻지 않고 화면을 찍게 되기 때문이다.
     public func handle(url: URL) {
         switch url.pathComponents.dropFirst().first ?? "area" {
-        case "full": captureFullScreen()
+        case "area": captureArea()
         case "library": openLibrary()
-        default: captureArea()
+        default: EppLog.write("캡처", "모르는 주소 명령 무시: \(url.path)")
         }
     }
 

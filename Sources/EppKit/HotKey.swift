@@ -86,6 +86,8 @@ public final class HotKey {
     private static var nextID: UInt32 = 1
     private static var actions: [UInt32: () -> Void] = [:]
     private static var handlerInstalled = false
+    /// 지금 등록돼 있는 단축키 수(점검용: 기능을 껐는데 남아 있으면 안 된다)
+    public static var registeredCount: Int { actions.count }
 
     private var hotKeyRef: EventHotKeyRef?
     private let id: UInt32

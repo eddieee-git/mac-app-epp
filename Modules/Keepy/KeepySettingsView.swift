@@ -8,7 +8,7 @@ enum KeepySettings {
     static func tabs(settings: AppSettings, store: HistoryStore) -> [EppSettingsTab] {
         [
             EppSettingsTab("general", L("일반"), keywords: [
-                L("기록"), L("보관할 항목 수"), L("기록 창 위치"),
+                L("기록"), L("보관할 항목 수"), L("오래된 기록 지우기"), L("기록 창 위치"),
                 L("모든 기록 지우기…"), L("붙여 넣기"), L("고르면 바로 붙여 넣기"),
             ]) { GeneralTab(settings: settings, store: store) },
             EppSettingsTab("ignored", L("제외 앱"), keywords: [
@@ -52,14 +52,24 @@ private struct GeneralTab: View {
 
     var body: some View {
         Form {
-            Section(L("기록")) {
+            Section {
                 Picker(L("보관할 항목 수"), selection: $settings.historyLimit) {
                     ForEach(AppSettings.historyLimits, id: \.self) { Text(L("%ld개", $0)).tag($0) }
+                }
+                Picker(L("오래된 기록 지우기"), selection: $settings.historyMaxAgeDays) {
+                    ForEach(AppSettings.historyMaxAges, id: \.self) { days in
+                        Text(days == 0 ? L("지우지 않음") : L("%ld일 지나면", days)).tag(days)
+                    }
                 }
                 Picker(L("기록 창 위치"), selection: $settings.panelPosition) {
                     ForEach(PanelPosition.allCases) { Text($0.title).tag($0) }
                 }
                 Button(L("모든 기록 지우기…"), role: .destructive) { confirmClear = true }
+            } header: {
+                Text(L("기록"))
+            } footer: {
+                Text(L("기록은 암호화해서 이 Mac에만 저장해요. 고정한 항목은 날짜가 지나도 지우지 않아요."))
+                    .font(.caption).foregroundStyle(.secondary)
             }
 
             Section {

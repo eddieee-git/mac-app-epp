@@ -1,5 +1,6 @@
 import AppKit
 import Carbon
+import CryptoKit
 import EppKit
 
 /// `Epp --self-test`(scripts/test.sh)가 돌리는 Keepy 점검. 실제 기록·설정·클립보드는 건드리지 않는다.
@@ -20,6 +21,7 @@ enum SelfTest {
 
         reader()
         store()
+        storeAgeAndMigration()
         settings()
 
         return failures == 0
@@ -71,7 +73,8 @@ enum SelfTest {
         let dir = FileManager.default.temporaryDirectory.appendingPathComponent("keepy-selftest-\(UUID().uuidString)")
         defer { try? FileManager.default.removeItem(at: dir) }
         var limit = 3
-        let store = HistoryStore(directory: dir, limit: { limit })
+        let crypto = EppCrypto(testKey: SymmetricKey(size: .bits256))
+        let store = HistoryStore(directory: dir, limit: { limit }, maxAgeDays: { 0 }, crypto: crypto)
 
         func content(_ s: String) -> CapturedContent {
             CapturedContent(kind: .text, text: s, hash: PasteboardReader.textHash(s))
@@ -104,14 +107,58 @@ enum SelfTest {
         expect(store.blobData(imageItem.imageFile) == nil, "되돌리기를 끝내면 파일도 지움")
 
         store.saveNow()
-        let reopened = HistoryStore(directory: dir, limit: { limit })
+        let reopened = HistoryStore(directory: dir, limit: { limit }, maxAgeDays: { 0 }, crypto: crypto)
         expect(reopened.items.map(\.text) == store.items.map(\.text), "다시 열면 그대로")
+        let index = (try? Data(contentsOf: dir.appendingPathComponent("history.json"))) ?? Data()
+        expect(EppCrypto.isEncrypted(index) && index.range(of: Data("\"text\"".utf8)) == nil, "기록 파일은 암호화해서 저장")
+        let blobs = (try? FileManager.default.contentsOfDirectory(at: store.blobDirectory, includingPropertiesForKeys: nil)) ?? []
+        expect(blobs.allSatisfy { EppCrypto.isEncrypted((try? Data(contentsOf: $0)) ?? Data()) }, "이미지·서식 파일도 암호화")
+        let otherKey = HistoryStore(directory: dir, limit: { limit }, maxAgeDays: { 0 },
+                                    crypto: EppCrypto(testKey: SymmetricKey(size: .bits256)))
+        expect(otherKey.items.isEmpty, "다른 키로는 읽지 못함")
+        otherKey.saveNow()
+        let kept = (try? FileManager.default.contentsOfDirectory(atPath: dir.path)) ?? []
+        expect(kept.contains { $0.hasPrefix("history-unreadable-") }, "읽지 못한 기록 파일은 덮어쓰지 않고 옆에 남김")
 
         limit = 1
         reopened.clear(includingPinned: false)
         expect(reopened.items.map(\.text) == ["b"], "기록 지우기는 고정을 남김")
         reopened.clear(includingPinned: true)
         expect(reopened.items.isEmpty, "모두 지우기")
+    }
+
+    private static func storeAgeAndMigration() {
+        print("오래된 기록, 예전 평문 기록")
+        let fm = FileManager.default
+        let dir = fm.temporaryDirectory.appendingPathComponent("keepy-selftest-\(UUID().uuidString)")
+        defer { try? fm.removeItem(at: dir) }
+        let crypto = EppCrypto(testKey: SymmetricKey(size: .bits256))
+
+        // 암호화 전 Keepy가 남긴 평문 기록(기록 하나 + 이미지 하나)
+        try? fm.createDirectory(at: dir.appendingPathComponent("blobs"), withIntermediateDirectories: true)
+        let old = Date().addingTimeInterval(-10 * 86_400)
+        let items = [
+            ClipItem(id: UUID(), kind: .text, text: "new", rtfFile: nil, imageFile: nil, filePaths: [], detail: nil,
+                     sourceBundleID: nil, sourceAppName: nil, createdAt: Date(), lastUsedAt: Date(), pinned: false, contentHash: "n"),
+            ClipItem(id: UUID(), kind: .image, text: "", rtfFile: nil, imageFile: "old.png", filePaths: [], detail: nil,
+                     sourceBundleID: nil, sourceAppName: nil, createdAt: old, lastUsedAt: old, pinned: true, contentHash: "o"),
+        ]
+        let encoder = JSONEncoder()
+        encoder.dateEncodingStrategy = .iso8601
+        try? encoder.encode(items).write(to: dir.appendingPathComponent("history.json"))
+        try? Data([1, 2, 3]).write(to: dir.appendingPathComponent("blobs/old.png"))
+
+        let store = HistoryStore(directory: dir, limit: { 100 }, maxAgeDays: { 7 }, crypto: crypto)
+        expect(store.items.count == 2, "예전 평문 기록을 읽음")
+        expect(store.blobData("old.png") == Data([1, 2, 3]), "예전 이미지도 읽음")
+        let index = (try? Data(contentsOf: dir.appendingPathComponent("history.json"))) ?? Data()
+        let blob = (try? Data(contentsOf: dir.appendingPathComponent("blobs/old.png"))) ?? Data()
+        expect(EppCrypto.isEncrypted(index) && EppCrypto.isEncrypted(blob), "읽은 뒤 바로 암호화해 둠")
+
+        store.togglePin(items[1].id) // 고정을 풀면 10일 지난 항목은 지워진다
+        expect(store.items.map(\.text) == ["new"], "7일 지난 기록은 지움(고정은 남김)")
+        store.trim(now: Date().addingTimeInterval(8 * 86_400))
+        expect(store.items.isEmpty, "시간이 지나면 지움")
     }
 
     private static func settings() {

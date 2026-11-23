@@ -296,7 +296,8 @@ public final class ClockyModule: NSObject, EppModule, NSMenuDelegate {
         switch url.pathComponents.dropFirst().first ?? "show" {
         case "list": showList()
         case "toggle": perform(.toggleTimer)
-        default: window.show()
+        case "show": window.show()
+        default: EppLog.write("타이머", "모르는 주소 명령 무시: \(url.path)")
         }
     }
 

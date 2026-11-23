@@ -67,6 +67,43 @@ final class ModuleManager: ObservableObject {
 
     func module(id: String) -> (any EppModule)? { running[id] }
 
+    #if DEBUG
+    /// 점검용(-debugCycleModules): 기능을 여러 번 켰다 껐다 하고, 끈 뒤에 남은 것이 없는지 본다.
+    /// 문제를 한 줄씩 돌려준다(비어 있으면 통과). 켠 목록(설정)은 바꾸지 않는다.
+    func debugCycle(ids: [String], times: Int) async -> [String] {
+        var problems: [String] = []
+        let hotKeysBefore = HotKey.registeredCount
+        let windowsBefore = Set(NSApp.windows.filter(\.isVisible).map(ObjectIdentifier.init))
+        for id in ids {
+            guard let type = ModuleList.type(id: id), running[id] == nil else {
+                problems.append("\(id): 이미 켜져 있거나 없는 기능이라 건너뜀")
+                continue
+            }
+            var released: [() -> Bool] = []
+            for _ in 0..<times {
+                launch(type)
+                try? await Task.sleep(for: .milliseconds(150))
+                guard let module = running.removeValue(forKey: id) else { continue }
+                module.stop()
+                weak var weakModule = module as AnyObject
+                released.append { weakModule == nil }
+            }
+            // 미뤄 둔 일(저장 예약 등)이 끝나도록 잠깐 기다린 뒤 본다.
+            try? await Task.sleep(for: .seconds(2))
+            let leaked = released.filter { !$0() }.count
+            if leaked > 0 { problems.append("\(id): 끈 뒤에도 메모리에 남은 기능 객체 \(leaked)/\(times)개") }
+            if HotKey.registeredCount != hotKeysBefore {
+                problems.append("\(id): 끈 뒤에도 남은 전역 단축키 \(HotKey.registeredCount - hotKeysBefore)개")
+            }
+            let windows = NSApp.windows.filter { $0.isVisible && !windowsBefore.contains(ObjectIdentifier($0)) }
+            if !windows.isEmpty {
+                problems.append("\(id): 끈 뒤에도 떠 있는 창 \(windows.count)개 (\(windows.map { $0.title.isEmpty ? String(describing: Swift.type(of: $0)) : $0.title }))")
+            }
+        }
+        return problems
+    }
+    #endif
+
     private func launch(_ type: any EppModule.Type) {
         let id = type.info.id
         guard running[id] == nil else { return }

@@ -745,7 +745,8 @@ public final class FloatyModule: NSObject, EppModule, NSMenuDelegate {
         switch url.pathComponents.dropFirst().first ?? "new" {
         case "manager": showManager()
         case "toggle": toggleAll()
-        default: newNote()
+        case "new": newNote()
+        default: EppLog.write("스티커", "모르는 주소 명령 무시: \(url.path)")
         }
     }
 

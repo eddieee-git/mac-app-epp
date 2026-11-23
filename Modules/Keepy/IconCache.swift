@@ -7,15 +7,16 @@ enum IconCache {
     private static var appIcons: [String: NSImage] = [:]
     private static var fileIcons = NSCache<NSString, NSImage>()
 
-    static func thumbnail(at url: URL, maxPixel: Int = 96) -> NSImage? {
-        let key = url.path as NSString
+    /// 기록의 이미지 파일은 암호화돼 있어서 경로가 아니라 푼 데이터를 받는다. 캐시에 없을 때만 data()를 부른다.
+    static func thumbnail(key name: String, maxPixel: Int = 96, data: () -> Data?) -> NSImage? {
+        let key = name as NSString
         if let cached = thumbnails.object(forKey: key) { return cached }
         let options: [CFString: Any] = [
             kCGImageSourceCreateThumbnailFromImageAlways: true,
             kCGImageSourceCreateThumbnailWithTransform: true,
             kCGImageSourceThumbnailMaxPixelSize: maxPixel,
         ]
-        guard let source = CGImageSourceCreateWithURL(url as CFURL, nil),
+        guard let data = data(), let source = CGImageSourceCreateWithData(data as CFData, nil),
               let cg = CGImageSourceCreateThumbnailAtIndex(source, 0, options as CFDictionary)
         else { return nil }
         let image = NSImage(cgImage: cg, size: .zero)

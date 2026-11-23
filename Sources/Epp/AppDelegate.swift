@@ -82,6 +82,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, UNUser
         if let page = UserDefaults.standard.string(forKey: "openSettingsPage") {
             showSettings(page: page)
         }
+        // -debugCycleModules "keepy,clocky" -debugCycleTimes 20 : 켜고 끄기를 반복해 남는 것이 없는지 보고 끝낸다.
+        if let list = UserDefaults.standard.string(forKey: "debugCycleModules") {
+            let ids = list.split(separator: ",").map(String.init)
+            let times = max(1, UserDefaults.standard.integer(forKey: "debugCycleTimes"))
+            Task { @MainActor in
+                let problems = await manager.debugCycle(ids: ids, times: times)
+                let report = problems.isEmpty ? "CYCLE OK \(ids) × \(times)" : "CYCLE FAIL\n" + problems.joined(separator: "\n")
+                print(report)
+                try? report.write(toFile: NSTemporaryDirectory() + "epp-cycle.txt", atomically: true, encoding: .utf8)
+                NSApp.terminate(nil)
+            }
+        }
         #endif
 
         // 처음 켤 때는 켠 기능이 없으니 설정 창을 열어 기능을 고르게 한다.
@@ -132,8 +144,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, UNUser
     }
 
     /// epp://<기능 id>/<명령> — 예: epp://keepy/show
+    /// 웹페이지나 다른 앱도 이 주소를 열 수 있다. 그래서 기능은 창 열기처럼 해가 없는 명령만 받고(모르는 명령은 무시),
+    /// 여기서는 짧은 시간에 몰려오는 주소를 막는다(스티커를 수백 개 만들게 하는 등).
     func application(_ application: NSApplication, open urls: [URL]) {
         for url in urls where url.scheme == "epp" {
+            guard urlGate.allow() else {
+                EppLog.write("Epp", "주소가 너무 많이 와서 무시: \(url.host ?? "")\(url.path)")
+                continue
+            }
             guard let id = url.host?.lowercased() else { continue }
             if let module = manager.module(id: id) {
                 module.handle(url: url)
@@ -154,6 +172,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, UNUser
         }
         return menu
     }
+
+    private var urlGate = RateGate(limit: 5, per: 10)
 
     @objc func openSettings() { showSettings(page: nil) }
 
@@ -301,5 +321,24 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, UNUser
         window.addItem(withTitle: L("창 닫기"), action: #selector(NSWindow.performClose(_:)), keyEquivalent: "w")
         windowItem.submenu = window
         return main
+    }
+}
+
+/// 정한 시간 안에 정한 횟수까지만 통과시킨다(epp:// 주소 몰림 막기).
+struct RateGate {
+    let limit: Int
+    let per: TimeInterval
+    private var times: [Date] = []
+
+    init(limit: Int, per: TimeInterval) {
+        self.limit = limit
+        self.per = per
+    }
+
+    mutating func allow(now: Date = Date()) -> Bool {
+        times.removeAll { now.timeIntervalSince($0) >= per }
+        guard times.count < limit else { return false }
+        times.append(now)
+        return true
     }
 }

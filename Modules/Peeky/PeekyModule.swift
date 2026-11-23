@@ -153,7 +153,8 @@ public final class PeekyModule: EppModule {
     public func handle(url: URL) {
         switch url.pathComponents.dropFirst().first ?? "open" {
         case "arrange": arrangeMenuBar(collapseAfter: true)
-        default: if let first = prefs.groups.first { toggleBar(group: first.id) }
+        case "open": if let first = prefs.groups.first { toggleBar(group: first.id) }
+        default: EppLog.write("메뉴바", "모르는 주소 명령 무시: \(url.path)")
         }
     }
 

@@ -29,6 +29,8 @@ Swift Package 하나로, Xcode 없이 Command Line Tools만으로 빌드한다. 
 EPP_DEBUG=1 ./scripts/build-app.sh  # build/Epp Dev.app (디버그, -showInDock YES 인자 동작)
 swift scripts/make-icon.swift     # Resources/AppIcon.icns, docs/images/icon.png 다시 그리기
 ./scripts/e2e-update.sh           # 앱 안 업데이트를 이 Mac 안에서 끝까지 시험(시험 키·로컬 서버, Epp Dev). 1분쯤
+"build/Epp Dev.app/Contents/MacOS/Epp" -debugCycleModules keepy,clocky,floaty,grabby -debugCycleTimes 10 -enabledModules '()'
+                                  # 기능 켜기/끄기 반복 뒤 남은 객체·단축키·창 확인(CYCLE OK). 메뉴바(peeky)는 실제 메뉴바를 건드려 뺀다
 ./scripts/release.sh              # 점검 → dmg + .sig → 태그 push → gh release (main에서만, 하기 전에 사용자 확인)
 swift scripts/sign-update.swift public  # 업데이트 서명 키의 공개 키 출력
 ```
@@ -82,6 +84,13 @@ Modules/<이름>/     기능 하나 (예: Modules/Keepy)
 
 ## 규칙과 함정
 
+- **보안**
+  - 개인 내용(클립보드 기록 등)을 디스크에 쓸 때는 `EppCrypto(account: "<기능>-<무엇>")`로 암호화한다. 키는 키체인(서비스 = 번들 ID).
+    예전 평문 파일은 그대로 읽고 다음 저장 때 암호화한다. 읽지 못한 파일은 덮어쓰지 말고 옆에 남긴다(`history-unreadable-…`).
+    임시 서명이라 키체인 항목은 다른 앱도 묻지 않고 읽을 수 있다(복사·백업된 파일을 지키는 용도).
+  - `epp://` 주소는 웹페이지도 연다. `handle(url:)`은 **창 열기처럼 해가 없는 명령만** 받고 모르는 명령은 무시한다(기본 동작으로 넘기지 않는다).
+    묻지 않고 화면을 찍거나 데이터를 지우는 명령은 넣지 않는다. 본체가 10초에 5번으로 막는다(`RateGate`).
+
 - **설정 Form에는 `.scrollContentBackground(.hidden)`**. Form이 그리는 배경은 바탕화면 색이 묻어나 남색으로 보인다(시스템 설정은 회색). `EppSettingsPage`가 기능 탭에 붙여 준다.
 - **긴 글에 `.fixedSize(horizontal: false, vertical: true)`를 GroupBox 안에서 쓰지 않는다.** 폭 없이 재져 한 글자씩 줄이 바뀌고 창 전체가 밀렸다.
 - **SwiftUI `ForEach`에 기능 타입 목록(`[any EppModule.Type]`)을 바로 넣으면 컴파일러가 죽는다.** `ModuleList.infos`(값 목록)를 쓴다.
@@ -97,6 +106,7 @@ Modules/<이름>/     기능 하나 (예: Modules/Keepy)
 - 설정: 일반 · 제외 앱 · 단축키 (정보·로그인·언어·업데이트는 본체로).
 - 시작 안내 창(WelcomeWindow)을 지우고 설정 맨 위 시작하기 상자로 바꿨다. 권한 없이 붙여 넣으면 `context.showGettingStarted()`.
 - 단축키 겹침 경고에 단독 Keepy 앱(`com.eddieee.Keepy`)도 넣었다.
+- 기록(history.json, blobs/)은 `EppCrypto(account: "keepy-history")`로 암호화. 고정하지 않은 기록은 `historyMaxAgeDays`(기본 30일)가 지나면 지운다(시작할 때·한 시간마다).
 
 ## Peeky (Modules/Peeky)
 

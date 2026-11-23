@@ -184,7 +184,7 @@ struct ClipRow: View {
     private var leading: some View {
         switch item.kind {
         case .image:
-            if let name = item.imageFile, let thumb = IconCache.thumbnail(at: store.blobURL(name)) {
+            if let name = item.imageFile, let thumb = IconCache.thumbnail(key: name, data: { store.blobData(name) }) {
                 Image(nsImage: thumb)
                     .resizable()
                     .aspectRatio(contentMode: .fill)
