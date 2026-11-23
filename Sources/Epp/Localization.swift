@@ -66,6 +66,7 @@ enum Localization {
         ("겹쳐요", "Conflict"),
         ("켠 기능 중에 전역 단축키를 쓰는 기능이 없어요.", "None of the features you turned on use global shortcuts."),
         ("어디서나 동작하는 단축키예요. 누르면 그 기능의 단축키 탭에서 바꿀 수 있어요.", "Shortcuts that work anywhere. Click one to change it in that feature's Shortcuts tab."),
+        ("업데이트", "Updates"),
         ("문제 해결", "Troubleshooting"),
         ("진단 로그 남기기", "Keep a diagnostic log"),
         ("로그 파일 보기", "Show Log File"),

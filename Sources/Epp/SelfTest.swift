@@ -27,6 +27,11 @@ enum SelfTest {
             expect(ModuleManager.dataDirectory(for: type.info).lastPathComponent == type.info.storageName, "\(type.info.name) 데이터 폴더")
         }
 
+        print("[Epp] 업데이트 (공통)")
+        let updateFailures = AppUpdater.selfTest(appName: "Epp", publicKey: AppUpdater.appPublicKey, format: AppUpdater.appSignatureFormat)
+        updateFailures.forEach { expect(false, $0) }
+        expect(updateFailures.isEmpty, "공통 업데이트 점검")
+
         print("[Epp] 단축키")
         let combo = KeyCombo(keyCode: UInt32(kVK_ANSI_V), modifiers: UInt32(controlKey | optionKey), key: "V")
         expect(combo.displayText == "⌃⌥V", "단축키 표시")

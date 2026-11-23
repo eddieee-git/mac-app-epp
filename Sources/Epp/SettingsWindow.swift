@@ -204,7 +204,7 @@ private struct GeneralPage: View {
     static var keywords: [String] {
         [L("기능"), L("권한"), EppPermission.accessibility.title, EppPermission.screenRecording.title,
          L("단축키"), L("로그인 시 실행"), L("Dock에 아이콘 보이기"), L("언어"),
-         L("문제 해결"), L("진단 로그 남기기"), L("데이터 폴더"), L("정보")]
+         L("업데이트"), L("문제 해결"), L("진단 로그 남기기"), L("데이터 폴더"), L("정보")]
     }
 
     @ObservedObject var manager: ModuleManager
@@ -303,6 +303,8 @@ private struct GeneralPage: View {
                 Text(L("진단 로그는 권한·동작 문제를 찾을 때만 켜요. 모든 기능이 한 파일(~/Library/Logs)에 적고, 복사한 내용 같은 개인 내용은 적지 않아요. 끄면 파일을 지워요."))
                     .font(.caption).foregroundStyle(.secondary)
             }
+
+            AppUpdaterSection(updater: AppUpdater.shared)
 
             Section(L("정보")) {
                 HStack(spacing: 12) {

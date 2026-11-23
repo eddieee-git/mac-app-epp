@@ -40,4 +40,29 @@ fi
 # 강화 런타임(--options runtime)을 켜서 다른 라이브러리를 끼워 넣지 못하게 한다.
 codesign --force --sign - --options runtime -r="designated => identifier \"$bundle_id\"" "$app"
 
+if [[ $config == debug ]]; then
+    echo "$app"
+    exit 0
+fi
+
+# 배포용 dmg: 응용 프로그램 폴더로 끌어다 놓을 수 있게 바로가기를 함께 넣는다. 이름에 Info.plist의 버전을 넣는다.
+version=$(/usr/libexec/PlistBuddy -c "Print CFBundleShortVersionString" Resources/Info.plist)
+dmg="build/Epp-$version.dmg"
+staging=build/dmg
+rm -rf "$staging" "$dmg" "$dmg.sig"
+mkdir -p "$staging"
+cp -R "$app" "$staging/"
+ln -s /Applications "$staging/Applications"
+hdiutil create -quiet -volname Epp -srcfolder "$staging" -format UDZO "$dmg"
+rm -rf "$staging"
+
+# 앱 안 업데이트가 확인하는 Ed25519 서명. 릴리스에 dmg와 함께 .sig를 올린다.
+# 키(~/.config/epp/update-signing.key)가 없으면 .sig를 만들지 않고, 그 릴리스는 앱 안에서 자동 설치되지 않는다.
+if [[ -f "${EPP_UPDATE_KEY:-$HOME/.config/epp/update-signing.key}" ]]; then
+    swift scripts/sign-update.swift sign "$dmg" >/dev/null
+fi
+
 echo "$app"
+echo "$dmg"
+[[ -f "$dmg.sig" ]] && echo "$dmg.sig"
+exit 0

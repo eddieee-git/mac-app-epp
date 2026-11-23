@@ -71,6 +71,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         statusItem.button?.toolTip = solo.map { "\($0.name) (Epp)" } ?? "Epp"
 
         manager.startEnabled()
+        if AppUpdater.shouldRun { AppUpdater.shared.start() }
 
         #if DEBUG
         if let page = UserDefaults.standard.string(forKey: "openSettingsPage") {
@@ -133,6 +134,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             module.fillMenu(menu)
             menu.addItem(.separator())
             menu.addItem(withTitle: L("설정…"), action: #selector(openSettings), keyEquivalent: ",").target = self
+            menu.addItem(AppUpdater.shared.makeMenuItem())
             if module.makeGettingStarted() != nil {
                 let guide = menu.addItem(withTitle: L("시작 안내"), action: #selector(openGettingStarted(_:)), keyEquivalent: "")
                 guide.target = self
@@ -169,6 +171,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         }
         menu.addItem(.separator())
         menu.addItem(withTitle: L("설정…"), action: #selector(openSettings), keyEquivalent: ",").target = self
+        menu.addItem(AppUpdater.shared.makeMenuItem())
         menu.addItem(.separator())
         menu.addItem(withTitle: L("Epp 종료"), action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
     }

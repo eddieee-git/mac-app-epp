@@ -28,7 +28,22 @@ Swift Package 하나로, Xcode 없이 Command Line Tools만으로 빌드한다. 
 ./scripts/build-app.sh            # build/Epp.app (릴리스)
 EPP_DEBUG=1 ./scripts/build-app.sh  # build/Epp Dev.app (디버그, -showInDock YES 인자 동작)
 swift scripts/make-icon.swift     # Resources/AppIcon.icns, docs/images/icon.png 다시 그리기
+./scripts/e2e-update.sh           # 앱 안 업데이트를 이 Mac 안에서 끝까지 시험(시험 키·로컬 서버, Epp Dev). 1분쯤
+./scripts/release.sh              # 점검 → dmg + .sig → 태그 push → gh release (main에서만, 하기 전에 사용자 확인)
+swift scripts/sign-update.swift public  # 업데이트 서명 키의 공개 키 출력
 ```
+
+## 업데이트·릴리스
+
+- 업데이트 코드 `Sources/Epp/AppUpdater.swift`는 `../mac-app/shared/AppUpdater.swift` 복사본이다. 여기서 고치지 않는다.
+  원본이 바뀌면 다시 복사한다(`cp ../mac-app/shared/AppUpdater.swift Sources/Epp/`). Epp 값은 `UpdaterSetup.swift`에만.
+- 하루 한 번 GitHub(`eddieee-git/mac-app-epp`) 최신 릴리스를 묻고, 기본은 Epp를 쓰지 않을 때 알아서 설치한다.
+  설정 → 일반 → 업데이트, 메뉴의 "업데이트 확인…". **저장소가 비공개인 동안에는 릴리스를 찾지 못한다**(공개 API라서).
+- 디버그 빌드(Epp Dev)는 `-debugUpdateURL`을 줬을 때만 확인한다(`AppUpdater.shouldRun`).
+- **업데이트 서명 키**: 비밀 키는 저장소 밖 `~/.config/epp/update-signing.key`(`EPP_UPDATE_KEY`로 바꿀 수 있음). 공개 키는 `UpdaterSetup.swift`.
+  **읽어서 출력하거나 커밋하지 않는다. 잃어버리면 설치된 Epp가 새 버전을 자동으로 받지 못하니 따로 백업한다.**
+- 릴리스 순서: Info.plist 버전(+`CFBundleVersion`) 올리기 → `docs/releases/v<버전>.md` → 커밋·main push → `./scripts/release.sh`
+  → `gh api repos/eddieee-git/mac-app-epp/releases/latest --jq '.tag_name, .assets[].digest'`가 `shasum -a 256 build/Epp-<버전>.dmg`와 같은지.
 
 ## 구조
 
@@ -47,7 +62,8 @@ Sources/Epp/        본체
   ModuleList.swift    들어 있는 기능 목록(순서대로 메뉴·설정에 나옴)
   ModuleManager.swift 켜기/끄기, 기능별 저장소(UserDefaults "<번들 ID>.<id>", 폴더 "<Epp>/<이름>")
   SettingsWindow.swift 설정 창: 왼쪽 설정 검색 + 일반 + 기능 목록, 오른쪽 고른 쪽(기능은 EppSettingsPage)
-  SelfTest.swift      본체 점검 후 모든 기능의 runSelfTest()
+  SelfTest.swift      본체 점검(공통 업데이트 포함) 후 모든 기능의 runSelfTest()
+  AppUpdater.swift    공통 업데이트(../mac-app/shared 복사본) / UpdaterSetup.swift: Epp 값(저장소, 공개 키)
 Modules/<이름>/     기능 하나 (예: Modules/Keepy)
 ```
 
@@ -125,7 +141,6 @@ Modules/<이름>/     기능 하나 (예: Modules/Keepy)
 
 - [ ] Clocky, Floaty, Grabby 옮기기
 - [ ] Peeky를 실제로 켜서 확인(권한, 그룹 아이콘, 숨기기·정리, 끄고 켤 때 아이콘이 깨끗이 사라지는지)
-- [ ] 공통 업데이트(AppUpdater) 붙이기: GitHub 저장소, 서명 키, dmg 만들기, release.sh
 - [ ] 기존 단독 앱의 데이터 가져오기(처음 켤 때 물어보고 복사)
-- [ ] 모든 기능의 단축키를 한 화면에서 보기, 겹침 알리기
-- [ ] Epp 자동 업데이트(공통 AppUpdater, 서명 키, dmg, release.sh). 저장소가 공개여야 동작한다
+- [ ] 첫 릴리스(v0.1.0): 저장소 공개, 릴리스 노트, `./scripts/release.sh`
+- [ ] `../mac-app/scripts/sync-shared.sh`가 Epp에도 AppUpdater를 복사하게 하기(지금은 손으로 복사)
