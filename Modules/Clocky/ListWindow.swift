@@ -15,9 +15,6 @@ final class ListWindowController: NSObject, NSWindowDelegate {
         self.model = model
         self.undoManager = undoManager
         super.init()
-        NotificationCenter.default.addObserver(forName: Localization.didChange, object: nil, queue: .main) { [weak self] _ in
-            self?.window?.title = L("전체 목록")
-        }
     }
 
     var isVisible: Bool { window?.isVisible == true }

@@ -29,7 +29,7 @@ final class CaptureTab: NSView, NSDraggingSource {
         self.item = item
         self.fileURL = fileURL
         let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: Localization.language == .korean ? "ko_KR" : "en_US")
+        formatter.locale = Locale(identifier: EppLanguage.isKorean ? "ko_KR" : "en_US")
         if Calendar.current.isDateInToday(item.date) {
             formatter.timeStyle = .medium
         } else {

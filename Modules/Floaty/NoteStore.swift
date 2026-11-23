@@ -323,6 +323,9 @@ final class NoteStore: ObservableObject {
         try? FileManager.default.removeItem(at: bodyURL(id))
     }
 
+    /// 점검용
+    func bodyFileURL(_ id: UUID) -> URL { bodyURL(id) }
+
     private func bodyURL(_ id: UUID) -> URL {
         bodiesDir.appendingPathComponent("\(id.uuidString).rtfd-flat")
     }

@@ -81,7 +81,7 @@ public final class FloatyModule: NSObject, EppModule, NSMenuDelegate {
 
     public func start() {
         isRunning = true
-        FloatyTheme.apply(settings.theme.appearance)
+        FloatyTheme.apply(settings.theme)
         // 설정 창의 슬라이더나 메뉴의 단계 선택은 "새 스티커에만 적용"이 꺼져 있을 때 스티커별 값을 덮어 모두 같게 맞춘다.
         // 시작할 때 들어오는 현재 값은 건너뛰어야 스티커별 값이 유지된다.
         opacitySubscription = settings.$opacity.dropFirst().sink { [weak self] value in

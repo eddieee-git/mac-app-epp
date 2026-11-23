@@ -163,7 +163,9 @@ final class Preferences: ObservableObject {
     func removeGroup(_ id: UUID) {
         guard groups.count > 1 else { return }
         groups.removeAll { $0.id == id }
-        assignments = assignments.filter { $0.value != id }
+        // 지운 그룹에 있던 아이콘은 남은 첫 그룹으로 옮긴다(예전에는 배정을 지워서 아이콘 바에서 빠졌다).
+        let fallback = groups[0].id
+        assignments = assignments.mapValues { $0 == id ? fallback : $0 }
     }
 
     func updateGroup(_ group: ItemGroup) {

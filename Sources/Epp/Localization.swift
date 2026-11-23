@@ -1,22 +1,11 @@
 import EppKit
 import Foundation
 
-/// 본체 문구. 한국어 문구를 키로 쓰고, 언어가 한국어가 아니면 아래 사전의 영어로 바꾼다.
-/// 기능 문구는 각 기능 폴더의 Localization.swift에 따로 있다.
-func L(_ key: String, _ args: CVarArg...) -> String {
-    let format = EppLanguage.isKorean ? key : (Localization.english[key] ?? key)
-    return args.isEmpty ? format : String(format: format, arguments: args)
-}
-
 enum Localization {
-    static let english: [String: String] = Dictionary(pairs, uniquingKeysWith: { first, _ in first })
-
+    static let translations = EppTranslations(pairs)
+    static var english: [String: String] { translations.english }
     /// 자체 점검용: 두 번 들어간 키.
-    static var duplicateKeys: [String] {
-        var seen = Set<String>(), dupes: [String] = []
-        for (key, _) in pairs where !seen.insert(key).inserted { dupes.append(key) }
-        return dupes
-    }
+    static var duplicateKeys: [String] { translations.duplicateKeys }
 
     static let pairs: [(String, String)] = [
         // 메뉴바 메뉴
@@ -83,4 +72,9 @@ enum Localization {
         ("버전 %@", "Version %@"),
         ("Mac을 편하게 쓰는 작은 기능 모음", "Small tools that make the Mac easier to use"),
     ]
+}
+
+/// 화면 문구. 한국어 문구를 그대로 넘기면 Epp 언어로 돌려준다. `%@`, `%ld` 등은 args로 채운다.
+func L(_ korean: String, _ args: CVarArg...) -> String {
+    Localization.translations.text(korean, args)
 }

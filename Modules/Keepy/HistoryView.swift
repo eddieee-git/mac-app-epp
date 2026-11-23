@@ -1,3 +1,4 @@
+import EppKit
 import SwiftUI
 
 struct HistoryView: View {
@@ -130,7 +131,7 @@ struct ClipRow: View {
     private static let relative: RelativeDateTimeFormatter = {
         let f = RelativeDateTimeFormatter()
         f.unitsStyle = .short
-        f.locale = Locale(identifier: Localization.isKorean ? "ko_KR" : "en_US")
+        f.locale = Locale(identifier: EppLanguage.isKorean ? "ko_KR" : "en_US")
         return f
     }()
 

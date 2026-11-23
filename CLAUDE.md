@@ -82,7 +82,8 @@ Modules/<이름>/     기능 하나 (예: Modules/Keepy)
    - 설정 창 → `settingsTabs()`, 시작 안내 창 → `makeGettingStarted()` (아래 "화면 규칙". 정보·로그인·언어·업데이트는 뺀다)
    - URL 스킴 → `handle(url:)` (`epp://<id>/<명령>`)
 3. 저장 위치를 바꾼다: `UserDefaults.standard` → `context.defaults`, `Application Support/<이름>` → `context.dataDirectory`.
-4. 언어: 기능의 `Localization.isKorean`은 `EppLanguage.isKorean`을 돌려준다. 단축키는 EppKit의 `HotKey(combo:action:)`.
+4. 언어: 기능의 `Localization`은 `EppTranslations(pairs)`를 쓰고(사전은 `("한국어", "English"),` 꼴), `L()`은 `Localization.translations.text`.
+   언어 확인은 `EppLanguage.isKorean`(기능마다 언어 변수·바뀜 알림을 두지 않는다. 언어는 Epp를 다시 열어야 바뀐다). 단축키는 EppKit의 `HotKey(combo:action:)`.
 5. `Package.swift`의 `modules`와 `Sources/Epp/ModuleList.swift`에 한 줄씩 더한다.
 6. `./scripts/test.sh` → `./scripts/run.sh <id>`로 단독 확인 → `./scripts/run.sh`로 함께 확인.
 
@@ -120,6 +121,7 @@ Modules/<이름>/     기능 하나 (예: Modules/Keepy)
 - 자기 `HotKey.swift`를 지우고 EppKit `HotKey(keyCode:modifiers:action:)`을 쓴다. **기능마다 Carbon 처리기를 따로 두면 번호가 겹쳐 다른 기능의 단축키가 불린다.**
 - `Preferences.shared`, `PeekyStorage.defaults`·`logPath`는 `PeekyModule.init`에서 Epp가 준 값으로 채운다.
   `NSStatusItem Preferred Position …`(`StatusItemPlacement`)만은 macOS가 앱의 기본 UserDefaults에서 읽으므로 그대로 둔다.
+- 그룹을 지우면 그 아이콘은 남은 첫 그룹으로 간다(원본은 배정을 지워 아이콘 바에서 빠졌다 — Epp에서 고침, 점검 있음).
 - 숨기기가 Epp 아이콘까지 밀어내지 않게 `context.hostStatusItems()`를 보호 목록에 넣는다. Epp 아이콘은 `autosaveName = "EppMain"`, 처음 자리는 오른쪽 끝에서 170.
 - 오른쪽 클릭 메뉴의 "Peeky 종료"와 업데이트 항목을 뺐다(종료는 Epp 메뉴). 설정에서 로그인·언어·업데이트·정보를 뺐다.
 - 진단 로그: 자기 로그 파일·설정을 없애고 `ItemStore.log` → `EppLog.write("메뉴바", …)`.
@@ -130,14 +132,13 @@ Modules/<이름>/     기능 하나 (예: Modules/Keepy)
 원본: ../Floaty (커밋 62a4ae5). 바뀐 점:
 - `AppDelegate` → `FloatyModule`. 메뉴바 아이콘(압정 메모지)·⌥클릭 새 스티커·한 번만 실행(SingleInstance)은 뺐다. 메뉴는 Epp의 "스티커 ▸".
 - 앱 메뉴(파일 ⌘N·⌘D·⌘S·⌘P, 편집의 찾기·서식 없이 붙여넣기, 서식, 윈도우 ⌘\`)는 `mainMenus()`로 넘기고 본체가 합친다.
-- 테마는 `NSApp.appearance`가 아니라 스티커 창에만(`FloatyTheme`: StickyPanel, 스티커 관리 창, 되돌리기 알림). 앱 전체를 바꾸면 다른 기능 화면까지 바뀐다.
+- 테마는 `NSApp.appearance`가 아니라 스티커 창에만(`FloatyTheme` = EppKit `EppWindowTheme`: StickyPanel, 스티커 관리 창, 되돌리기 알림). 앱 전체를 바꾸면 다른 기능 화면까지 바뀐다.
 - 언어는 Epp를 따른다(`Localization.language` = `EppLanguage`). 바로 바뀌던 언어 고르기는 뺐다.
 - `KeyCombo`·`HotKey`는 EppKit 것. `HotKey.swift`에는 `HotKeyAction`과 기본값(`KeyCombo.defaults`, `renameDefault`, `migrated`, `matches`)만.
   단축키 편집기는 원래 것(전역 6개 + 스티커 안 제목 변경, 겹침 확인, 입력하는 동안 등록 풀기)을 그대로 쓴다.
 - 알람 알림은 `EppNotifications.post(moduleID: "floaty", identifier: <스티커 id>)`, 누르면 `handleNotification`.
 - 저장하지 못한 스티커가 있으면 `shouldQuit()`이 끄기 전에 묻는다.
-- 잠금 키는 키체인 서비스 `com.eddieee.Floaty` 그대로(나중에 옛 스티커를 가져올 때 같은 키로 풀 수 있게).
-- 번역 사전은 `"한국어": "English"` 꼴이다(`scripts/test.sh`가 두 꼴을 다 읽는다).
+- 잠근 스티커는 `EppCrypto(account: "floaty-locked-notes")`로 암호화. 예전 방식("FLTYENC1", 키체인 `com.eddieee.Floaty`)은 읽기만 하고 다음 저장 때 바뀐다.
 
 ## Clocky (Modules/Clocky) = 타이머
 
@@ -149,7 +150,7 @@ Modules/<이름>/     기능 하나 (예: Modules/Keepy)
   Mac 캘린더를 켤 때 묻는 흐름(캘린더 탭)은 그대로 둔다.
 - 단위 시험은 `Tests/ClockyTests`(Swift Testing). `scripts/test.sh`가 Command Line Tools 경로를 알려 주고 `swift test`로 돌린다.
   옛 GUI 시험(Tests/GUI, gui-test.sh)과 업데이트·샌드박스 시험은 가져오지 않았다.
-- 영어 사전은 `ClockySettings.swift` 안 `enum Localization`(`"한국어": "English"` 꼴). **같은 키가 두 번 들어가면 실행 중에 죽는다.**
+- 영어 사전은 `ClockySettings.swift` 안 `enum Localization`. 시험에서 언어를 바꿀 때는 `EppLanguage.isKorean = false`.
 
 ## Grabby (Modules/Grabby) = 캡처
 
@@ -157,7 +158,7 @@ Modules/<이름>/     기능 하나 (예: Modules/Keepy)
 - `AppDelegate` → `GrabbyModule`. 메뉴바 아이콘·시작 안내 창(WelcomeWindow)·업데이트·한 번만 실행은 뺐다. 메뉴는 Epp의 "캡처 ▸".
 - `AppPresence`(창이 열리면 일반 앱으로 바꾸기)를 뺐다. Dock·앱 메뉴는 Epp의 "Dock에 아이콘 보이기"를 따른다.
 - 앱 메뉴(파일: 캡처 창 열기·저장 ⌘S, 윈도우: 최소화 ⌘M 등)는 `mainMenus()`.
-- 테마는 캡처 창(탭 창 `LibraryWindow`, 띄운 캡처 `PinWindow`)에만(`GrabbyTheme`).
+- 테마는 캡처 창(탭 창 `LibraryWindow`, 띄운 캡처 `PinWindow`)에만(`GrabbyTheme` = `EppWindowTheme`). 테마 종류는 EppKit `EppTheme`.
 - 저장은 `GrabbyStorage.defaults`·`folder`. 탭 보관함 `<Epp>/Grabby/Captures`, 띄운 캡처 `<Epp>/Grabby/Pins`.
   `AppSettings.shared`는 `AppSettings!`라 `let settings: AppSettings = AppSettings.shared`처럼 타입을 적는다.
 - 동작 기록(`EventLog`)은 따로 파일을 쓰지 않고 `EppLog.write("캡처", …)`(진단 로그를 켰을 때만).

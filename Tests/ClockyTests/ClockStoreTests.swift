@@ -1,3 +1,4 @@
+import EppKit
 import Foundation
 import Testing
 @testable import Clocky
@@ -44,9 +45,9 @@ private func encode<T: Encodable>(_ value: T) -> Data { try! JSONEncoder().encod
 
         let id = store.addTimer()
         #expect(store.timers.first { $0.id == id }?.number == 4)
-        Localization.language = .english
+        EppLanguage.isKorean = false
         #expect(store.displayName(of: store.timers[0]) == "Timer 3")
-        Localization.language = .korean
+        EppLanguage.isKorean = true
         #expect(store.displayName(of: store.timers[0]) == "타이머 3")
     }
 
@@ -348,7 +349,7 @@ private func encode<T: Encodable>(_ value: T) -> Data { try! JSONEncoder().encod
 
     @Test func 글자() {
         let now = Date()
-        Localization.language = .korean
+        EppLanguage.isKorean = true
         #expect(remainingText(until: now.addingTimeInterval(9.2), from: now) == "10초")
         #expect(remainingText(until: now.addingTimeInterval(3 * 3600 + 61), from: now) == "3시간 2분")
         #expect(remainingText(until: now.addingTimeInterval(26 * 3600), from: now) == "1일 2시간")

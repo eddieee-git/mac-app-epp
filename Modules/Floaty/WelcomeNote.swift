@@ -11,7 +11,7 @@ enum WelcomeNote {
     static func make(hotKeys: [String: KeyCombo]) -> (title: String, body: NSAttributedString) {
         let newNote = hotKeys[HotKeyAction.newNote.rawValue]?.displayText
         let toggleAll = hotKeys[HotKeyAction.toggleAll.rawValue]?.displayText
-        let isKorean = Localization.language == .korean
+        let isKorean = EppLanguage.isKorean
 
         let lines: [String]
         let heading: String

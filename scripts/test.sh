@@ -16,7 +16,7 @@ for src in [pathlib.Path("Sources/Epp"), *sorted(pathlib.Path("Modules").iterdir
     loc_file = loc_files[0]
     loc = loc_file.read_text()
     known = set(re.findall(r'^\s*\("((?:[^"\\]|\\.)*)",', loc, re.M))
-    # 사전이 ("한국어", "English") 목록이 아니라 "한국어": "English" 꼴인 기능(스티커)도 읽는다.
+    # 예전 꼴("한국어": "English")도 읽는다. 지금은 모두 ("한국어", "English") 꼴이다.
     known |= set(re.findall(r'^\s*"((?:[^"\\]|\\.)*)"\s*:\s*"', loc, re.M))
     used = set()
     for f in src.glob("*.swift"):

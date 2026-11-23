@@ -12,26 +12,7 @@ final class AppSettings: ObservableObject {
     private let hotKeysKey = "hotKeys"
     private let knownActionsKey = "knownHotKeyActions"
 
-    enum Theme: String, CaseIterable {
-        case light, dark, system
-
-        var title: String {
-            switch self {
-            case .light: return L("라이트")
-            case .dark: return L("다크")
-            case .system: return L("시스템")
-            }
-        }
-
-        /// nil이면 시스템 설정을 따른다.
-        var appearance: NSAppearance? {
-            switch self {
-            case .light: return NSAppearance(named: .aqua)
-            case .dark: return NSAppearance(named: .darkAqua)
-            case .system: return nil
-            }
-        }
-    }
+    typealias Theme = EppTheme
 
     /// 화이트보드 바탕.
     enum BoardStyle: String, CaseIterable {
@@ -75,12 +56,13 @@ final class AppSettings: ObservableObject {
     @Published var failedHotKeys: Set<HotKeyAction> = []
 
     /// 화면 언어. Epp 설정 → 일반 → 언어를 따른다(바꾸면 Epp를 다시 연다).
-    var language: AppLanguage { Localization.language }
+    /// 화면을 언어에 맞춰 다시 그리는 표시(.id)
+    var language: String { EppLanguage.isKorean ? "ko" : "en" }
     /// 캡처 창(탭 창, 띄운 캡처)에만 쓰는 테마. Epp 다른 화면은 시스템을 따른다.
     @Published var theme: Theme {
         didSet {
             defaults.set(theme.rawValue, forKey: "theme")
-            GrabbyTheme.apply(theme.appearance)
+            GrabbyTheme.apply(theme)
         }
     }
     @Published var confirmDelete: Bool { didSet { defaults.set(!confirmDelete, forKey: "skipDeleteConfirmation") } }
@@ -262,15 +244,12 @@ final class AppSettings: ObservableObject {
 }
 
 /// 캡처 창(탭 창, 띄운 캡처)에만 테마를 입힌다. Epp 전체(NSApp.appearance)를 바꾸면 다른 기능 화면까지 바뀐다.
+/// 캡처 창(탭 창, 띄운 캡처)의 테마. 창은 모두 메인 스레드에서 만든다.
 enum GrabbyTheme {
-    nonisolated(unsafe) private(set) static var appearance: NSAppearance?
-
-    static func apply(_ appearance: NSAppearance?) {
-        self.appearance = appearance
-        MainActor.assumeIsolated {
-            for window in NSApp.windows where window is LibraryWindow || window is PinWindow { window.appearance = appearance }
-        }
-    }
+    @MainActor static let windows = EppWindowTheme { $0 is LibraryWindow || $0 is PinWindow }
+    /// 새 캡처 창에 넣을 모양. nil이면 시스템을 따른다.
+    static var appearance: NSAppearance? { MainActor.assumeIsolated { windows.appearance } }
+    static func apply(_ theme: EppTheme) { MainActor.assumeIsolated { windows.apply(theme) } }
 }
 
 /// Epp 설정 창에서 캡처를 골랐을 때의 탭: 일반 · 편집 · 저장 · 단축키.
@@ -330,7 +309,7 @@ struct SettingsView: View {
                 }
                 .pickerStyle(.segmented)
                 // 분할 버튼은 글자가 바뀌어도 다시 그리지 않아서, 언어를 바꾸면 새로 만든다.
-                .id("segment2-\(settings.language.rawValue)")
+                .id("segment2-\(settings.language)")
                 Toggle(L("탭을 삭제하기 전에 확인"), isOn: $settings.confirmDelete)
                 Picker(L("보관할 캡처 수"), selection: $settings.keepCount) {
                     ForEach(AppSettings.keepCountOptions, id: \.self) { count in
@@ -360,7 +339,7 @@ struct SettingsView: View {
                     ForEach(AppSettings.timerOptions, id: \.self) { Text(L("%ld초", $0)).tag($0) }
                 }
                 .pickerStyle(.segmented)
-                .id("segment8-\(settings.language.rawValue)")
+                .id("segment8-\(settings.language)")
             }
         }
         .formStyle(.grouped)
@@ -376,7 +355,7 @@ struct SettingsView: View {
                     Text(L("굵게")).tag(2)
                 }
                 .pickerStyle(.segmented)
-                .id("segment3-\(settings.language.rawValue)")
+                .id("segment3-\(settings.language)")
                 Toggle(L("마지막에 쓴 색과 굵기를 기본값으로 기억"), isOn: $settings.rememberLastStyle)
             }
             Section(L("캡처 화면")) {
@@ -384,12 +363,12 @@ struct SettingsView: View {
                     ForEach(AppSettings.ToolbarLayout.allCases, id: \.self) { Text($0.title).tag($0) }
                 }
                 .pickerStyle(.segmented)
-                .id("segment6-\(settings.language.rawValue)")
+                .id("segment6-\(settings.language)")
                 Picker(L("도구 막대 위치"), selection: $settings.toolbarAlignment) {
                     ForEach(AppSettings.ToolbarAlignment.allCases, id: \.self) { Text($0.title).tag($0) }
                 }
                 .pickerStyle(.segmented)
-                .id("segment7-\(settings.language.rawValue)")
+                .id("segment7-\(settings.language)")
                 Toggle(L("도구 막대 아래 안내 문구 보이기"), isOn: $settings.toolbarHint)
                 Toggle(L("창을 고르면 뒤에 겹친 창 없이 그 창만 캡처"), isOn: $settings.isolateWindow)
                 Toggle(L("전체 화면 캡처는 편집 없이 바로 복사"), isOn: $settings.fullScreenInstant)
@@ -409,14 +388,14 @@ struct SettingsView: View {
                     Text(L("넓게")).tag(2)
                 }
                 .pickerStyle(.segmented)
-                .id("segment4-\(settings.language.rawValue)")
+                .id("segment4-\(settings.language)")
             }
             Section(L("화이트보드")) {
                 Picker(L("화이트보드 바탕"), selection: $settings.boardStyle) {
                     ForEach(AppSettings.BoardStyle.allCases, id: \.self) { Text($0.title).tag($0) }
                 }
                 .pickerStyle(.segmented)
-                .id("segment5-\(settings.language.rawValue)")
+                .id("segment5-\(settings.language)")
                 Picker(L("화이트보드 시작 도구"), selection: $settings.whiteboardTool) {
                     ForEach(Tool.allCases.filter { $0 != .select }, id: \.self) { Text($0.name).tag($0) }
                 }

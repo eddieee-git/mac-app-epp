@@ -159,7 +159,7 @@ extension LibraryWindowController {
             menu.addItem(closeAll)
             menu.addItem(.separator())
         }
-        let locale = Locale(identifier: Localization.language == .korean ? "ko_KR" : "en_US")
+        let locale = Locale(identifier: EppLanguage.isKorean ? "ko_KR" : "en_US")
         let dayFormatter = DateFormatter()
         dayFormatter.locale = locale
         dayFormatter.setLocalizedDateFormatFromTemplate("MMMMdEEE")

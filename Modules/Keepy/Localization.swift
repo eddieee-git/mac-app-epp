@@ -1,25 +1,11 @@
 import EppKit
 import Foundation
 
-/// 한국어 문구를 키로 쓴다. 언어가 한국어가 아니면 아래 사전의 영어로 바꾼다.
-/// 새 문구를 쓰면 `pairs`에 영어를 더한다. 빠진 번역은 scripts/test.sh가, 같은 키가 두 번 들어간 것은 자체 점검이 알려 준다.
-func L(_ key: String, _ args: CVarArg...) -> String {
-    let format = Localization.isKorean ? key : (Localization.english[key] ?? key)
-    return args.isEmpty ? format : String(format: format, arguments: args)
-}
-
 enum Localization {
-    /// Epp 설정 → 일반 → 언어를 따른다.
-    static var isKorean: Bool { EppLanguage.isKorean }
-
-    static let english: [String: String] = Dictionary(pairs, uniquingKeysWith: { first, _ in first })
-
+    static let translations = EppTranslations(pairs)
+    static var english: [String: String] { translations.english }
     /// 자체 점검용: 두 번 들어간 키.
-    static var duplicateKeys: [String] {
-        var seen = Set<String>(), dupes: [String] = []
-        for (key, _) in pairs where !seen.insert(key).inserted { dupes.append(key) }
-        return dupes
-    }
+    static var duplicateKeys: [String] { translations.duplicateKeys }
 
     static let pairs: [(String, String)] = [
         // Epp 공통 설정 틀
@@ -103,4 +89,9 @@ enum Localization {
         ("삭제 되돌리기", "Undo delete"),
         ("검색어 지우기 / 닫기", "Clear search / Close"),
     ]
+}
+
+/// 화면 문구. 한국어 문구를 그대로 넘기면 Epp 언어로 돌려준다. `%@`, `%ld` 등은 args로 채운다.
+func L(_ korean: String, _ args: CVarArg...) -> String {
+    Localization.translations.text(korean, args)
 }

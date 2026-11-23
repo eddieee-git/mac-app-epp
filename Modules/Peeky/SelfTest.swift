@@ -2,6 +2,7 @@ import CryptoKit
 import Foundation
 
 /// `Epp --self-test`(scripts/test.sh)가 돌리는 Peeky 점검. 실제 설정·권한·메뉴 막대는 건드리지 않는다.
+@MainActor
 enum SelfTest {
     private static var failures = 0
 
@@ -49,6 +50,30 @@ enum SelfTest {
         print("순서")
         let sorted = Preferences.ordered(["a", "b", "c", "d"], by: ["c", "a"]) { $0 }
         expect(sorted == ["c", "a", "b", "d"], "저장한 순서 먼저, 나머지는 원래 순서")
+
+        print("그룹 설정")
+        let suite = "peeky-selftest-\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suite)!
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let prefs: Preferences = Preferences(defaults: defaults)
+        let first = prefs.groups.first?.id
+        expect(first != nil, "처음에 그룹 하나")
+        let second = prefs.addGroup()
+        expect(prefs.groups.count == 2 && second.symbol != prefs.groups[0].symbol, "그룹 더하기(다른 모양)")
+        prefs.assign("item.a", to: second.id)
+        prefs.assign("item.b", to: nil)
+        expect(prefs.group(for: "item.a") == second.id, "아이콘을 그룹에 넣기")
+        expect(prefs.group(for: "item.b") == nil, "아이콘 끄기")
+        prefs.setOrder(["item.b", "item.a"])
+        let again: Preferences = Preferences(defaults: defaults)
+        expect(again.groups.count == 2 && again.group(for: "item.a") == second.id && again.itemOrder.prefix(2) == ["item.b", "item.a"],
+               "다시 열면 그대로")
+        prefs.removeGroup(second.id)
+        expect(prefs.groups.count == 1 && prefs.group(for: "item.a") == first, "지운 그룹의 아이콘은 첫 그룹으로")
+        prefs.removeGroup(prefs.groups[0].id)
+        expect(prefs.groups.count == 1, "마지막 그룹은 지우지 않음")
+        prefs.rowCount = 9
+        expect(prefs.rowCount(for: nil) == 3, "줄 수는 3까지")
 
         return failures == 0
     }

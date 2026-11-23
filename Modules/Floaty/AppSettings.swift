@@ -9,26 +9,7 @@ final class AppSettings: ObservableObject {
         case fixed
     }
 
-    enum Theme: String, CaseIterable {
-        case light, dark, system
-
-        var title: String {
-            switch self {
-            case .light: return L("라이트")
-            case .dark: return L("다크")
-            case .system: return L("시스템")
-            }
-        }
-
-        /// nil이면 시스템 설정을 따른다.
-        var appearance: NSAppearance? {
-            switch self {
-            case .light: return NSAppearance(named: .aqua)
-            case .dark: return NSAppearance(named: .darkAqua)
-            case .system: return nil
-            }
-        }
-    }
+    typealias Theme = EppTheme
 
     static let opacityRange = 0.3...1.0
     static let widthRange = 200.0...800.0
@@ -116,11 +97,12 @@ final class AppSettings: ObservableObject {
     /// 시스템이 거부해 등록하지 못한 동작.
     @Published var failedHotKeys: Set<HotKeyAction> = []
     /// 화면 언어. Epp 설정 → 일반 → 언어를 따른다(바꾸면 Epp를 다시 연다).
-    var language: AppLanguage { Localization.language }
+    /// 화면을 언어에 맞춰 다시 그리는 표시(.id)
+    var language: String { EppLanguage.isKorean ? "ko" : "en" }
     @Published var theme: Theme {
         didSet {
             defaults.set(theme.rawValue, forKey: Keys.theme)
-            FloatyTheme.apply(theme.appearance)
+            FloatyTheme.apply(theme)
         }
     }
     /// 동작별 소리. 키는 `SoundEffect.rawValue`이고, 없는 동작은 기본 소리를 쓴다.
@@ -174,7 +156,7 @@ final class AppSettings: ObservableObject {
         customColors = defaults.dictionary(forKey: Keys.customColors) as? [String: Int] ?? [:]
         footerInfo = defaults.string(forKey: Keys.footerInfo).flatMap(FooterInfo.init) ?? .modified
         // 날짜 표기를 따로 고르지 않았으면 화면 언어에 맞는 표기로 시작한다.
-        let isKorean = Localization.language == .korean
+        let isKorean = EppLanguage.isKorean
         dateStyle = defaults.string(forKey: Keys.dateStyle).flatMap(DateStyle.init) ?? (isKorean ? .dotted : .englishShort)
         yearStyle = defaults.string(forKey: Keys.yearStyle).flatMap(YearStyle.init) ?? YearStyle.none
         weekdayStyle = defaults.string(forKey: Keys.weekdayStyle).flatMap(WeekdayStyle.init) ?? (isKorean ? .koreanShort : .englishShort)
@@ -205,7 +187,7 @@ final class AppSettings: ObservableObject {
     /// 숫자만 쓰는 표기, 한자 요일, 24시간제처럼 언어와 상관없는 표기는 그대로 둔다.
     /// 직접 고르지 않은 값은 저장하지 않아야 다음에 언어를 바꿀 때도 따라간다.
     private func applyLanguageDefaults() {
-        let isKorean = language == .korean
+        let isKorean = EppLanguage.isKorean
         func update<T: Equatable>(_ key: String, _ current: T, _ fallback: T, _ mapped: T?, set: (T) -> Void) {
             let isStored = defaults.object(forKey: key) != nil
             let next = isStored ? mapped ?? current : fallback
@@ -254,17 +236,13 @@ final class AppSettings: ObservableObject {
 }
 
 /// 스티커 창에만 테마를 입힌다. Epp 전체(NSApp.appearance)를 바꾸면 다른 기능 화면까지 바뀌기 때문이다.
+/// 스티커 창(StickyPanel, 스티커 관리, 되돌리기 알림)의 테마. 창은 모두 메인 스레드에서 만든다.
 enum FloatyTheme {
-    /// nil이면 시스템을 따른다. 메인 스레드에서만 바꾼다.
-    nonisolated(unsafe) private(set) static var appearance: NSAppearance?
+    @MainActor static let windows = EppWindowTheme(owns: isFloatyWindow)
+    /// 새 스티커 창에 넣을 모양. nil이면 시스템을 따른다.
+    static var appearance: NSAppearance? { MainActor.assumeIsolated { windows.appearance } }
+    static func apply(_ theme: EppTheme) { MainActor.assumeIsolated { windows.apply(theme) } }
     static let managerWindowID = NSUserInterfaceItemIdentifier("floaty.manager")
-
-    static func apply(_ appearance: NSAppearance?) {
-        self.appearance = appearance
-        MainActor.assumeIsolated {
-            for window in NSApp.windows where isFloatyWindow(window) { window.appearance = appearance }
-        }
-    }
 
     static func isFloatyWindow(_ window: NSWindow) -> Bool {
         window is StickyPanel || window.identifier == managerWindowID || window.identifier == UndoToast.windowID

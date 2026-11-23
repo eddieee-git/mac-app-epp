@@ -11,9 +11,6 @@ final class NoteManagerWindowController: NSObject, NSWindowDelegate {
     init(model: NoteManagerModel) {
         self.model = model
         super.init()
-        NotificationCenter.default.addObserver(forName: Localization.didChange, object: nil, queue: .main) { [weak self] _ in
-            self?.window?.title = L("스티커 관리")
-        }
     }
 
     func close() { window?.close() }
