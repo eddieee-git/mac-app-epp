@@ -173,7 +173,7 @@ private struct SettingsView: View {
 
     @ViewBuilder private var detail: some View {
         if router.page == SettingsRouter.general {
-            GeneralPage(manager: manager)
+            GeneralPage(manager: manager, router: router)
         } else if let info = ModuleList.infos.first(where: { $0.id == router.page }) {
             if let module = manager.module(id: info.id) {
                 EppSettingsPage(info: info, tabs: module.settingsTabs(), gettingStarted: module.makeGettingStarted())
@@ -210,11 +210,14 @@ private struct GeneralPage: View {
     /// 설정 검색에서 이 쪽을 찾게 할 설정 이름들
     static var keywords: [String] {
         [L("기능"), L("권한"), EppPermission.accessibility.title, EppPermission.screenRecording.title,
-         L("로그인 시 실행"), L("Dock에 아이콘 보이기"), L("언어"), L("정보")]
+         L("단축키"), L("로그인 시 실행"), L("Dock에 아이콘 보이기"), L("언어"),
+         L("문제 해결"), L("진단 로그 남기기"), L("데이터 폴더"), L("정보")]
     }
 
     @ObservedObject var manager: ModuleManager
+    let router: SettingsRouter
     @ObservedObject private var permissions = EppPermissions.shared
+    @AppStorage(EppLog.enabledKey) private var diagnosticLog = false
     private let poll = Timer.publish(every: 2, on: .main, in: .common).autoconnect()
 
     @State private var launchAtLogin = SMAppService.mainApp.status == .enabled
@@ -254,6 +257,7 @@ private struct GeneralPage: View {
             }
 
             permissionSection
+            shortcutSection
 
             Section {
                 Toggle(L("로그인 시 실행"), isOn: $launchAtLogin)
@@ -281,6 +285,30 @@ private struct GeneralPage: View {
                         Button(L("Epp 다시 열기")) { EppApp.relaunch() }
                     }
                 }
+            }
+
+            Section {
+                Toggle(L("진단 로그 남기기"), isOn: $diagnosticLog)
+                    .onChange(of: diagnosticLog) { _, on in if !on { EppLog.clear() } }
+                if diagnosticLog {
+                    Button(L("로그 파일 보기")) {
+                        NSWorkspace.shared.selectFile(EppLog.path, inFileViewerRootedAtPath: "")
+                    }
+                    .buttonStyle(.link)
+                }
+                LabeledContent(L("데이터 폴더")) {
+                    Button(L("Finder에서 보기")) {
+                        let folder = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+                            .appendingPathComponent(ModuleManager.folderName, isDirectory: true)
+                        try? FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+                        NSWorkspace.shared.activateFileViewerSelecting([folder])
+                    }
+                }
+            } header: {
+                Text(L("문제 해결"))
+            } footer: {
+                Text(L("진단 로그는 권한·동작 문제를 찾을 때만 켜요. 모든 기능이 한 파일(~/Library/Logs)에 적고, 복사한 내용 같은 개인 내용은 적지 않아요. 끄면 파일을 지워요."))
+                    .font(.caption).foregroundStyle(.secondary)
             }
 
             Section(L("정보")) {
@@ -335,6 +363,44 @@ private struct GeneralPage: View {
             Text(L("권한"))
         } footer: {
             Text(L("Mac은 권한을 Epp 하나에 줘요. 시스템 설정 → 개인정보 보호 및 보안에서 Epp를 켜면 모든 기능에 적용돼요."))
+                .font(.caption).foregroundStyle(.secondary)
+        }
+    }
+
+    /// 켠 기능의 전역 단축키를 한곳에. 같은 키를 두 기능이 쓰면 알린다. 누르면 그 기능의 단축키 탭으로 간다.
+    @ViewBuilder private var shortcutSection: some View {
+        let rows = manager.enabledTypes.flatMap { type -> [(EppModuleInfo, EppShortcutInfo)] in
+            (manager.module(id: type.info.id)?.globalShortcuts() ?? []).map { (type.info, $0) }
+        }
+        let counts = Dictionary(rows.map { ($0.1.keys, 1) }, uniquingKeysWith: +)
+        Section {
+            if rows.isEmpty {
+                Text(L("켠 기능 중에 전역 단축키를 쓰는 기능이 없어요.")).foregroundStyle(.secondary)
+            }
+            ForEach(Array(rows.enumerated()), id: \.offset) { _, row in
+                let (info, shortcut) = row
+                Button {
+                    router.go(page: info.id, tab: "shortcuts")
+                } label: {
+                    HStack {
+                        Image(systemName: info.symbol).foregroundStyle(.secondary).frame(width: 18)
+                            .accessibilityHidden(true)
+                        Text("\(info.name) · \(shortcut.title)")
+                        Spacer()
+                        if counts[shortcut.keys, default: 0] > 1 {
+                            Label(L("겹쳐요"), systemImage: "exclamationmark.triangle.fill")
+                                .font(.caption).foregroundStyle(.orange)
+                        }
+                        Text(shortcut.keys).font(.system(.body, design: .monospaced)).foregroundStyle(.secondary)
+                    }
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+            }
+        } header: {
+            Text(L("단축키"))
+        } footer: {
+            Text(L("어디서나 동작하는 단축키예요. 누르면 그 기능의 단축키 탭에서 바꿀 수 있어요."))
                 .font(.caption).foregroundStyle(.secondary)
         }
     }

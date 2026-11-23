@@ -1,4 +1,5 @@
 import AppKit
+import EppKit
 import ApplicationServices
 import ScreenCaptureKit
 
@@ -114,7 +115,7 @@ final class ItemStore: ObservableObject {
     /// Probes ScreenCaptureKit. Only runs once the user has asked for the permission (or macOS already
     /// reports it), so Peeky never triggers the system prompt on its own.
     func checkScreenCapture() {
-        let asked = PeekyStorage.defaults.bool(forKey: "requestedScreenCapture")
+        let asked = UserDefaults.standard.bool(forKey: "requestedScreenCapture")
         guard !checkingCapture, asked || CGPreflightScreenCaptureAccess() else { return }
         checkingCapture = true
         Task {
@@ -136,20 +137,9 @@ final class ItemStore: ObservableObject {
         }
     }
 
-    nonisolated static var logPath: String { PeekyStorage.logPath }
-
-    /// 진단 로그를 켰을 때만 로그 파일(PeekyStorage.logPath)에 한 줄 더한다(권한 문제 확인용).
+    /// 진단 로그(Epp 공통, 설정 → 일반 → 문제 해결)를 켰을 때만 한 줄 더한다(권한 문제 확인용).
     nonisolated static func log(_ line: String) {
-        guard PeekyStorage.defaults.bool(forKey: "diagnosticLog") else { return }
-        let path = logPath
-        let text = "\(Date()) \(line)\n"
-        if let handle = FileHandle(forWritingAtPath: path) {
-            handle.seekToEndOfFile()
-            handle.write(Data(text.utf8))
-            try? handle.close()
-        } else {
-            try? text.write(toFile: path, atomically: true, encoding: .utf8)
-        }
+        EppLog.write("메뉴바", line)
     }
 
     // MARK: - Accessibility scan
@@ -190,7 +180,7 @@ final class ItemStore: ObservableObject {
                 let frame = AX.frame(child)
                 if identifier == nil, desc == nil, title == nil, help == nil,
                    frame.map({ $0.width < 1 || $0.height < 1 }) ?? true { continue }
-                if PeekyStorage.defaults.bool(forKey: "diagnosticLog") {
+                if EppLog.isOn {
                     log("item \(app.bundleID) [\(index)] id=\(identifier ?? "-") desc=\(desc ?? "-") title=\(title ?? "-") help=\(help ?? "-") x=\(Int(frame?.minX ?? -1))")
                 }
                 let label = SystemItemNames.label(bundleID: app.bundleID, identifier: identifier,

@@ -5,6 +5,4 @@ import Foundation
 enum PeekyStorage {
     /// Peeky 설정(Epp의 기능별 UserDefaults). 점검할 때는 임시 저장소.
     nonisolated(unsafe) static var defaults: UserDefaults = .standard
-    /// 진단 로그 파일 (~/Library/Logs/<Epp 이름> Peeky.log)
-    nonisolated(unsafe) static var logPath = NSHomeDirectory() + "/Library/Logs/Epp Peeky.log"
 }

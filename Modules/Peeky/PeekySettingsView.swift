@@ -9,7 +9,7 @@ enum PeekySettings {
         [
             EppSettingsTab("general", L("일반"), keywords: [
                 L("메뉴바 정리"), L("다시 정리"),
-                L("바 아이콘을 오른쪽 끝으로 옮기기"), L("문제 해결"), L("진단 로그 남기기"),
+                L("바 아이콘을 오른쪽 끝으로 옮기기"),
             ]) { PeekySettingsView(tab: .general) },
             EppSettingsTab("icons", L("아이콘"), keywords: [
                 L("메뉴바 아이콘"), L("보이기"), L("숨기기"), L("「숨기기」 아이콘을 메뉴바에서 숨기기"), L("항목 검색"),
@@ -18,7 +18,7 @@ enum PeekySettings {
                 L("그룹 추가"), L("아이콘 바 모양"), L("줄 수"), L("바 최대 너비"), L("순서 초기화"),
             ]) { PeekySettingsView(tab: .groups) },
             EppSettingsTab("shortcuts", L("단축키"), keywords: [
-                L("그룹 단축키"), L("보조 키"),
+                L("전역 단축키"), L("보조 키"),
             ]) { PeekySettingsView(tab: .shortcuts) },
         ]
     }
@@ -66,7 +66,6 @@ struct PeekySettingsView: View {
             case .general:
                 if !hiddenIcons.isEmpty { hiddenIconSection }
                 menuBarSection
-                advancedSection
             case .icons:
                 itemsSection
             case .groups:
@@ -121,8 +120,8 @@ struct PeekySettingsView: View {
                 ForEach(HotKeyModifiers.allCases) { Text($0.title).tag($0) }
             }
             if prefs.hotKeyModifiers != .off {
-                if let first = prefs.groups.first {
-                    LabeledContent(L("%@ 열기", first.name)) {
+                if !prefs.groups.isEmpty {
+                    LabeledContent(L("첫 그룹 열기")) {
                         Text("\(prefs.hotKeyModifiers.symbol)B").font(.system(.body, design: .monospaced)).foregroundStyle(.secondary)
                     }
                 }
@@ -133,9 +132,9 @@ struct PeekySettingsView: View {
                 }
             }
         } header: {
-            Text(L("그룹 단축키"))
+            Text(L("전역 단축키"))
         } footer: {
-            Text(L("그룹 단축키에 쓸 보조 키. 1~9는 각 그룹, B는 첫 그룹이에요."))
+            Text(L("보조 키 하나를 고르면 B는 첫 그룹, 1~9는 각 그룹 바를 열어요.") + " " + EppShortcutText.footer)
                 .font(.caption).foregroundStyle(.secondary)
         }
     }
@@ -249,23 +248,6 @@ struct PeekySettingsView: View {
             Text(L("「보이기」는 메뉴바에 그대로 둬요. 「숨기기」는 메뉴바에서 빼고 아이콘 바에 모아요. 바 아이콘을 누르면 바가 열리고, 바에서 누르면 원래 메뉴가 열려요."))
                 .font(.caption).foregroundStyle(.secondary)
             Text(L("자리가 모자라면 macOS는 왼쪽 아이콘부터 숨겨요. 꼭 보여야 하는 「보이기」 아이콘은 오른쪽 클릭 → 맨 오른쪽으로 옮기기를 고르세요."))
-                .font(.caption).foregroundStyle(.secondary)
-        }
-    }
-
-    private var advancedSection: some View {
-        Section {
-            Toggle(L("진단 로그 남기기"), isOn: $prefs.diagnosticLog)
-            if prefs.diagnosticLog {
-                Button(L("로그 파일 보기")) {
-                    NSWorkspace.shared.selectFile(ItemStore.logPath, inFileViewerRootedAtPath: "")
-                }
-                .buttonStyle(.link)
-            }
-        } header: {
-            Text(L("문제 해결"))
-        } footer: {
-            Text(L("권한이 인식되지 않을 때 원인을 찾는 데 써요. ~/Library/Logs 폴더의 로그 파일에 권한 상태만 기록하고, 끄면 파일을 지워요."))
                 .font(.caption).foregroundStyle(.secondary)
         }
     }

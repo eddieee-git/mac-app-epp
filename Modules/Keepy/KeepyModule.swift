@@ -73,6 +73,10 @@ public final class KeepyModule: EppModule {
 
     public static func runSelfTest() -> Bool { SelfTest.run() }
 
+    public func globalShortcuts() -> [EppShortcutInfo] {
+        settings.hotKey.map { [EppShortcutInfo(title: L("클립보드 기록 열기"), keys: $0.displayText)] } ?? []
+    }
+
     public static let permissionNeeds = [
         EppPermissionNeed(.accessibility, required: false,
                           reasonKo: "고른 항목을 앞에 있던 앱에 바로 붙여 넣기 (없으면 복사만)",

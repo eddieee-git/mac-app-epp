@@ -8,7 +8,7 @@ enum KeepySettings {
     static func tabs(settings: AppSettings, store: HistoryStore) -> [EppSettingsTab] {
         [
             EppSettingsTab("general", L("일반"), keywords: [
-                L("기록"), L("보관할 항목 수"), L("기록 창 위치"), L("저장 위치"),
+                L("기록"), L("보관할 항목 수"), L("기록 창 위치"),
                 L("모든 기록 지우기…"), L("붙여 넣기"), L("고르면 바로 붙여 넣기"),
             ]) { GeneralTab(settings: settings, store: store) },
             EppSettingsTab("ignored", L("제외 앱"), keywords: [
@@ -58,11 +58,6 @@ private struct GeneralTab: View {
                 }
                 Picker(L("기록 창 위치"), selection: $settings.panelPosition) {
                     ForEach(PanelPosition.allCases) { Text($0.title).tag($0) }
-                }
-                LabeledContent(L("저장 위치")) {
-                    Button(L("Finder에서 보기")) {
-                        NSWorkspace.shared.activateFileViewerSelecting([store.directory])
-                    }
                 }
                 Button(L("모든 기록 지우기…"), role: .destructive) { confirmClear = true }
             }
@@ -131,11 +126,9 @@ private struct IgnoredAppsTab: View {
 
 // MARK: - 단축키
 
+/// 단축키 탭: 전역 단축키(공통 EppShortcutRow) → 기록 창 안에서. 모든 기능이 같은 순서.
 private struct ShortcutsTab: View {
     @ObservedObject var settings: AppSettings
-    @State private var recording = false
-    @State private var monitor: Any?
-    @State private var message: String?
     @State private var runningApps = HotKeyConflicts.runningClipboardApps
 
     private let panelKeys: [(String, String)] = [
@@ -158,39 +151,12 @@ private struct ShortcutsTab: View {
                         .font(.caption)
                         .foregroundStyle(.orange)
                 }
-                LabeledContent(L("클립보드 기록 열기")) {
-                    HStack(spacing: 8) {
-                        if settings.hotKeyFailed {
-                            Text(L("등록하지 못함")).font(.caption).foregroundStyle(.red)
-                        }
-                        Button(recording ? L("키를 누르세요") : settings.hotKey?.displayText ?? L("없음")) {
-                            recording ? stop() : start()
-                        }
-                        .frame(minWidth: 110)
-                        Button {
-                            stop()
-                            settings.hotKey = nil
-                        } label: {
-                            Image(systemName: "xmark.circle.fill")
-                        }
-                        .buttonStyle(.borderless)
-                        .disabled(settings.hotKey == nil)
-                        .help(L("단축키 지우기"))
-                        .accessibilityLabel(L("단축키 지우기"))
-                    }
-                }
-                HStack {
-                    Text(message ?? L("다른 앱과 겹치면 먼저 등록한 앱이 키를 받아요. esc로 입력 취소."))
-                        .font(.caption)
-                        .foregroundStyle(message == nil ? Color.secondary : Color.red)
-                    Spacer()
-                    Button(L("기본값으로")) {
-                        stop()
-                        settings.hotKey = .openHistoryDefault
-                    }
-                }
+                EppShortcutRow(L("클립보드 기록 열기"), combo: $settings.hotKey,
+                               defaultCombo: .openHistoryDefault, failed: settings.hotKeyFailed)
             } header: {
                 Text(L("전역 단축키"))
+            } footer: {
+                Text(EppShortcutText.footer).font(.caption).foregroundStyle(.secondary)
             }
 
             Section(L("기록 창 안에서")) {
@@ -201,39 +167,8 @@ private struct ShortcutsTab: View {
                 }
             }
         }
-        .onDisappear(perform: stop)
         .onReceive(NotificationCenter.default.publisher(for: NSWindow.didBecomeKeyNotification)) { _ in
             runningApps = HotKeyConflicts.runningClipboardApps
         }
-        .onReceive(NotificationCenter.default.publisher(for: NSWindow.didResignKeyNotification)) { _ in stop() }
-    }
-
-    private func start() {
-        stop()
-        recording = true
-        monitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
-            handle(event)
-            return nil
-        }
-    }
-
-    private func stop() {
-        if let monitor { NSEvent.removeMonitor(monitor) }
-        monitor = nil
-        recording = false
-        message = nil
-    }
-
-    private func handle(_ event: NSEvent) {
-        if event.keyCode == 53 { // esc
-            stop()
-            return
-        }
-        guard let combo = KeyCombo(event: event) else {
-            message = L("⌘, ⌃, ⌥ 중 하나와 함께 누르세요.")
-            return
-        }
-        settings.hotKey = combo
-        stop()
     }
 }

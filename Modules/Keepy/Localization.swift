@@ -67,7 +67,6 @@ enum Localization {
         ("파일 %ld개", "%ld files"),
 
         // 시작 안내
-        ("없음", "None"),
 
         // 설정
         ("일반", "General"),
@@ -78,8 +77,6 @@ enum Localization {
         ("기록 창 위치", "History window position"),
         ("마우스 포인터 위치", "At the pointer"),
         ("화면 가운데", "Center of the screen"),
-        ("저장 위치", "Storage"),
-        ("Finder에서 보기", "Show in Finder"),
         ("모든 기록 지우기…", "Clear All History…"),
         ("모든 기록을 지울까요?", "Clear all history?"),
         ("모두 지우기", "Clear All"),
@@ -95,11 +92,6 @@ enum Localization {
         ("기록 창 안에서", "In the history window"),
         ("%@이(가) 켜져 있어요. 같은 단축키를 쓰면 먼저 등록한 앱이 키를 받으니, 겹치지 않게 바꿔 주세요.",
          "%@ is running. If it uses the same shortcut, the app that registered first gets the key, so pick a different one."),
-        ("등록하지 못함", "Couldn't register"),
-        ("키를 누르세요", "Press keys"),
-        ("단축키 지우기", "Clear shortcut"),
-        ("다른 앱과 겹치면 먼저 등록한 앱이 키를 받아요. esc로 입력 취소.", "If another app uses the same keys, the one that registered first gets them. Press esc to cancel."),
-        ("⌘, ⌃, ⌥ 중 하나와 함께 누르세요.", "Press it together with ⌘, ⌃ or ⌥."),
         ("항목 고르기", "Choose an item"),
         ("그 번호 항목 바로 붙여 넣기", "Paste that item right away"),
         ("고정 / 고정 풀기", "Pin / Unpin"),

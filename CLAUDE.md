@@ -38,6 +38,8 @@ Sources/EppKit/     모든 기능이 같이 쓰는 부품
   HotKey.swift        KeyCombo, 전역 단축키(번호 자동 배정, 처리기 하나)
   EppLanguage.swift   언어(설정의 "language"), 다시 열기, esc로 닫히는 창
   EppPermissions.swift 권한 상태·요청(손쉬운 사용, 화면 기록), 기능이 알리는 필요(EppPermissionNeed)
+  EppLog.swift        공통 진단 로그
+  EppShortcuts.swift  단축키 줄(EppShortcutRow), 기능이 알리는 전역 단축키(EppShortcutInfo)
   EppSettings.swift   기능 설정 틀(EppSettingsPage, EppSettingsTab), 시작하기(EppStepList), 권한 줄(EppPermissionRow)
 Sources/Epp/        본체
   main.swift          Dock 아이콘(설정 "showInDock", 기본 끔), --self-test, --only <id>(단독 실행), 하나만 실행
@@ -87,7 +89,7 @@ Modules/<이름>/     기능 하나 (예: Modules/Keepy)
   `NSStatusItem Preferred Position …`(`StatusItemPlacement`)만은 macOS가 앱의 기본 UserDefaults에서 읽으므로 그대로 둔다.
 - 숨기기가 Epp 아이콘까지 밀어내지 않게 `context.hostStatusItems()`를 보호 목록에 넣는다. Epp 아이콘은 `autosaveName = "EppMain"`, 처음 자리는 오른쪽 끝에서 170.
 - 오른쪽 클릭 메뉴의 "Peeky 종료"와 업데이트 항목을 뺐다(종료는 Epp 메뉴). 설정에서 로그인·언어·업데이트·정보를 뺐다.
-- 진단 로그: `~/Library/Logs/<Epp 이름> Peeky.log`.
+- 진단 로그: 자기 로그 파일·설정을 없애고 `ItemStore.log` → `EppLog.write("메뉴바", …)`.
 - `Preferences.shared`가 `Preferences!`라서 `let prefs = Preferences.shared`처럼 쓰면 Optional이 된다. 타입을 적는다(`let prefs: Preferences = …`).
 
 ## 화면 규칙 (모든 기능이 같게)
@@ -102,6 +104,11 @@ Modules/<이름>/     기능 하나 (예: Modules/Keepy)
 
 본체가 틀을 그리고, 기능은 내용만 넘긴다. 기능이 자기 설정 창·시작 안내 창을 따로 만들지 않는다.
 
+- **기능마다 따로 두지 않는 것 (Epp 일반에 한 번만)**: 로그인 시 실행, Dock, 언어, 권한, 진단 로그(`EppLog`, `~/Library/Logs/<Epp 이름>.log`),
+  데이터 폴더(Finder에서 보기), 업데이트, 정보. 일반 → **단축키**는 켠 기능의 `globalShortcuts()`를 모아 보여 주고 같은 키면 "겹쳐요".
+  기능 설정에는 그 기능에만 뜻이 있는 것만 둔다.
+- **로그**: `EppLog.write("<기능 이름>", …)`(진단 로그를 켰을 때만), 오류는 `EppLog.error`(시스템 로그에도). 개인 내용(복사한 글 등)은 적지 않는다.
+- **단축키 탭**: 첫 섹션 "전역 단축키"(키 하나를 고르는 건 `EppShortcutRow`, footer는 `EppShortcutText.footer`), 그다음 "<창> 안에서" 키 목록.
 - **설정**: `settingsTabs()`가 `[EppSettingsTab]`을 돌려준다. 본체가 `EppSettingsPage`로 그린다:
   머리(아이콘·이름·설명) → 시작하기 상자 → 위쪽 탭 → 고른 탭의 `Form`(`.grouped`).
   - 탭 순서: **일반**(id `general`) · (기능 고유 탭) · **단축키**(id `shortcuts`). 단축키가 없으면 단축키 탭을 빼도 된다.

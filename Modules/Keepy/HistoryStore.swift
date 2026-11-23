@@ -1,4 +1,5 @@
 import AppKit
+import EppKit
 
 /// 기록 목록과 디스크 저장을 맡는다.
 /// <Epp 데이터 폴더>/Keepy/history.json + blobs/(이미지·RTF)
@@ -145,7 +146,7 @@ final class HistoryStore: ObservableObject {
             try data.write(to: blobURL(name), options: .atomic)
             return name
         } catch {
-            NSLog("Keepy: 파일 저장 실패 \(error)")
+            EppLog.error("클립보드", "파일 저장 실패 \(error)")
             return nil
         }
     }
@@ -165,7 +166,7 @@ final class HistoryStore: ObservableObject {
         do {
             items = try decoder.decode([ClipItem].self, from: data)
         } catch {
-            NSLog("Keepy: 기록을 읽지 못함 \(error)")
+            EppLog.error("클립보드", "기록을 읽지 못함 \(error)")
         }
     }
 
@@ -187,7 +188,7 @@ final class HistoryStore: ObservableObject {
             let data = try encoder.encode(items)
             try data.write(to: indexURL, options: .atomic)
         } catch {
-            NSLog("Keepy: 기록 저장 실패 \(error)")
+            EppLog.error("클립보드", "기록 저장 실패 \(error)")
         }
     }
 }

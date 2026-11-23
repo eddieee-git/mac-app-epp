@@ -89,10 +89,6 @@ final class Preferences: ObservableObject {
         didSet { defaults.set(hotKeyModifiers.rawValue, forKey: "hotKeyModifiers") }
     }
 
-    /// 권한 문제를 볼 때만 켜는 진단 로그(PeekyStorage.logPath).
-    @Published var diagnosticLog: Bool {
-        didSet { defaults.set(diagnosticLog, forKey: "diagnosticLog") }
-    }
 
     /// 고르지 않은 아이콘을 「보이기」로 다룰지. 0.3.2까지는 첫 그룹(「숨기기」)이었다.
     /// 그 전부터 쓰던 설정은 첫 전체 스캔 때 지금 아이콘들을 「숨기기 · 첫 그룹」으로 적어 둔 뒤 켠다.
@@ -128,7 +124,6 @@ final class Preferences: ObservableObject {
         rowCount = min(3, max(1, defaults.object(forKey: "rowCount") as? Int ?? 1))
         hideInMenuBar = defaults.object(forKey: "hideInMenuBar") as? Bool ?? false
         hotKeyModifiers = HotKeyModifiers(rawValue: defaults.object(forKey: "hotKeyModifiers") as? Int ?? 0) ?? .controlOption
-        diagnosticLog = defaults.object(forKey: "diagnosticLog") as? Bool ?? false
         // 처음 설치했으면 바로 새 방식. 예전부터 쓰던 Mac은 첫 스캔에서 옮겨 적는다.
         newIconsVisible = defaults.object(forKey: "newIconsVisible") as? Bool
             ?? !defaults.bool(forKey: "hasLaunchedBefore")

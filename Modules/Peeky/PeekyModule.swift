@@ -41,7 +41,6 @@ public final class PeekyModule: EppModule {
         self.context = context
         // 여러 곳이 Preferences.shared와 PeekyStorage를 쓰므로 Epp가 준 저장소로 먼저 바꿔 둔다.
         PeekyStorage.defaults = context.defaults
-        PeekyStorage.logPath = NSHomeDirectory() + "/Library/Logs/\(context.appName) Peeky.log"
         prefs = Preferences(defaults: context.defaults)
         Preferences.shared = prefs
     }
@@ -100,10 +99,6 @@ public final class PeekyModule: EppModule {
                 self.arrangeMenuBar(collapseAfter: false)
             }
             .store(in: &cancellables)
-        prefs.$diagnosticLog
-            .dropFirst()
-            .sink { enabled in if !enabled { try? FileManager.default.removeItem(atPath: ItemStore.logPath) } }
-            .store(in: &cancellables)
 
         let center = NSWorkspace.shared.notificationCenter
         for name in [NSWorkspace.didLaunchApplicationNotification, NSWorkspace.didTerminateApplicationNotification] {
@@ -116,7 +111,6 @@ public final class PeekyModule: EppModule {
             MainActor.assumeIsolated { self?.appsChanged() }
         })
 
-        try? FileManager.default.removeItem(atPath: ItemStore.logPath)
         let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "-"
         ItemStore.log("launch \(Bundle.main.bundlePath) version=\(version) axTrusted=\(AX.isTrusted) preflight=\(CGPreflightScreenCaptureAccess())")
         ItemStore.shared.checkScreenCapture()
@@ -164,6 +158,19 @@ public final class PeekyModule: EppModule {
     }
 
     public static func runSelfTest() -> Bool { SelfTest.run() }
+
+    public func globalShortcuts() -> [EppShortcutInfo] {
+        let modifiers = prefs.hotKeyModifiers
+        guard modifiers != .off else { return [] }
+        var list: [EppShortcutInfo] = []
+        if !prefs.groups.isEmpty {
+            list.append(.init(title: L("첫 그룹 열기"), keys: "\(modifiers.symbol)B"))
+        }
+        for (index, group) in prefs.groups.prefix(Self.numberKeys.count).enumerated() {
+            list.append(.init(title: L("%@ 열기", group.name), keys: "\(modifiers.symbol)\(index + 1)"))
+        }
+        return list
+    }
 
     public static let permissionNeeds = [
         EppPermissionNeed(.accessibility, required: true,

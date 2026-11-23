@@ -47,6 +47,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        EppLog.path = NSHomeDirectory() + "/Library/Logs/\(ModuleManager.folderName).log"
+        EppLog.clear()
+        EppLog.write("Epp", "launch \(Bundle.main.bundlePath) version=\(Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") ?? "-") features=\(manager.enabledIDs)")
         NSApp.mainMenu = makeMainMenu()
 
         // 새 아이콘은 macOS가 왼쪽 끝(노치 쪽)에 놓아 가려질 수 있다. 처음 한 번만 오른쪽 가까이에 둔다.

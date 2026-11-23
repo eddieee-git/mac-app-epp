@@ -58,6 +58,9 @@ public protocol EppModule: AnyObject {
     /// `epp://<id>/<명령>` 주소로 열렸을 때. 예: epp://keepy/show
     func handle(url: URL)
 
+    /// 지금 등록한 전역 단축키(어디서나 동작하는 키). Epp 일반 → 단축키에 모아 보여 주고 겹치면 알린다.
+    func globalShortcuts() -> [EppShortcutInfo]
+
     /// 이 기능이 쓰는 macOS 권한. 권한은 Epp 일반 → 권한 한 곳에서 다루고, 기능 설정에는 권한 칸을 두지 않는다.
     static var permissionNeeds: [EppPermissionNeed] { get }
 
@@ -69,6 +72,7 @@ public extension EppModule {
     func handle(url: URL) {}
     func makeGettingStarted() -> AnyView? { nil }
     static var permissionNeeds: [EppPermissionNeed] { [] }
+    func globalShortcuts() -> [EppShortcutInfo] { [] }
 }
 
 /// 본체가 기능에 넘겨주는 것: 그 기능만 쓰는 설정 저장소와 데이터 폴더, 본체 동작.

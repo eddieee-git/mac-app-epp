@@ -21,7 +21,7 @@ enum AX {
     /// Registers Epp with Screen Recording: macOS lists an app there only after it tries to capture.
     /// Asks the system, makes a real capture attempt, then opens the settings pane.
     static func requestScreenCapture() {
-        PeekyStorage.defaults.set(true, forKey: "requestedScreenCapture")
+        UserDefaults.standard.set(true, forKey: "requestedScreenCapture")
         if CGRequestScreenCaptureAccess() { return }
         Task {
             _ = try? await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: true)
