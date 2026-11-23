@@ -27,6 +27,7 @@ Swift Package 하나로, Xcode 없이 Command Line Tools만으로 빌드한다. 
 ./scripts/run.sh keepy            # Keepy 하나만 단독으로 켜기(개발·시험용)
 ./scripts/build-app.sh            # build/Epp.app (릴리스)
 EPP_DEBUG=1 ./scripts/build-app.sh  # build/Epp Dev.app (디버그, -showInDock YES 인자 동작)
+./scripts/make-signing-cert.sh    # (한 번) 이 Mac 전용 서명 인증서 "Epp Local Signing". 백업 ~/.config/epp/codesign.p12(+.pass)
 swift scripts/make-icon.swift     # Resources/AppIcon.icns, docs/images/icon.png 다시 그리기
 ./scripts/e2e-update.sh           # 앱 안 업데이트를 이 Mac 안에서 끝까지 시험(시험 키·로컬 서버, Epp Dev). 1분쯤
 "build/Epp Dev.app/Contents/MacOS/Epp" -debugCycleModules keepy,clocky,floaty,grabby -debugCycleTimes 10 -enabledModules '()'
@@ -42,6 +43,9 @@ swift scripts/sign-update.swift public  # 업데이트 서명 키의 공개 키 
 - 하루 한 번 GitHub(`eddieee-git/mac-app-epp`) 최신 릴리스를 묻고, 기본은 Epp를 쓰지 않을 때 알아서 설치한다.
   설정 → 일반 → 업데이트, 메뉴의 "업데이트 확인…". **저장소가 비공개인 동안에는 릴리스를 찾지 못한다**(공개 API라서).
 - 디버그 빌드(Epp Dev)는 `-debugUpdateURL`을 줬을 때만 확인한다(`AppUpdater.shouldRun`).
+- **코드 서명**: `scripts/sign-app.sh`가 "Epp Local Signing" 인증서로 서명하고 서명 조건을 `identifier + certificate leaf`로 정한다
+  (같은 인증서로 서명한 Epp만 권한·키체인 열쇠를 이어받는다). 인증서가 없으면 임시 서명(번들 ID만). 인증서를 믿게 하는
+  `security add-trusted-cert`는 사용자가 직접 실행한다(암호를 물음). **인증서를 잃으면 권한을 다시 허용해야 하니 `~/.config/epp`를 통째로 백업한다.**
 - **업데이트 서명 키**: 비밀 키는 저장소 밖 `~/.config/epp/update-signing.key`(`EPP_UPDATE_KEY`로 바꿀 수 있음). 공개 키는 `UpdaterSetup.swift`.
   **읽어서 출력하거나 커밋하지 않는다. 잃어버리면 설치된 Epp가 새 버전을 자동으로 받지 못하니 따로 백업한다.**
 - 릴리스 순서: Info.plist 버전(+`CFBundleVersion`) 올리기 → `docs/releases/v<버전>.md` → 커밋·main push → `./scripts/release.sh`
@@ -87,7 +91,8 @@ Modules/<이름>/     기능 하나 (예: Modules/Keepy)
 - **보안**
   - 개인 내용(클립보드 기록 등)을 디스크에 쓸 때는 `EppCrypto(account: "<기능>-<무엇>")`로 암호화한다. 키는 키체인(서비스 = 번들 ID).
     예전 평문 파일은 그대로 읽고 다음 저장 때 암호화한다. 읽지 못한 파일은 덮어쓰지 말고 옆에 남긴다(`history-unreadable-…`).
-    임시 서명이라 키체인 항목은 다른 앱도 묻지 않고 읽을 수 있다(복사·백업된 파일을 지키는 용도).
+    인증서로 서명한 Epp가 새로 만든 키는 Epp만 읽는다. 임시 서명일 때 만든 키는 다른 앱도 묻지 않고 읽는다.
+    확인: `"build/Epp Dev.app/Contents/MacOS/Epp" -debugCryptoCheck <이름>` → `security dump-keychain -a`로 접근 목록을 본 뒤 그 키를 지운다.
   - `epp://` 주소는 웹페이지도 연다. `handle(url:)`은 **창 열기처럼 해가 없는 명령만** 받고 모르는 명령은 무시한다(기본 동작으로 넘기지 않는다).
     묻지 않고 화면을 찍거나 데이터를 지우는 명령은 넣지 않는다. 본체가 10초에 5번으로 막는다(`RateGate`).
 

@@ -34,8 +34,7 @@ ditto "build/Epp Dev.app" "$apps/Epp Dev.app"
 ditto "build/Epp Dev.app" "$work/new/Epp.app"
 /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString $new_version" "$work/new/Epp.app/Contents/Info.plist"
 /usr/libexec/PlistBuddy -c "Set :CFBundleVersion 9999" "$work/new/Epp.app/Contents/Info.plist"
-codesign --force --sign - --options runtime --entitlements Resources/Epp.entitlements \
-    -r='designated => identifier "com.eddieee.Epp.dev"' "$work/new/Epp.app"
+./scripts/sign-app.sh "$work/new/Epp.app" com.eddieee.Epp.dev
 hdiutil create -quiet -volname Epp -srcfolder "$work/new" -format UDZO "$work/www/Epp-$new_version.dmg"
 
 echo "== 시험 키로 서명 (진짜 서명 키는 쓰지 않아요)"

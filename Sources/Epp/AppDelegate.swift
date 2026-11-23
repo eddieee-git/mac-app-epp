@@ -82,6 +82,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, UNUser
         if let page = UserDefaults.standard.string(forKey: "openSettingsPage") {
             showSettings(page: page)
         }
+        // -debugCryptoCheck <account> : 그 이름으로 키를 만들어 암호화·풀기를 해 보고 결과를 출력한다(키는 남겨 둠 — 확인 뒤 지운다).
+        if let account = UserDefaults.standard.string(forKey: "debugCryptoCheck") {
+            let crypto = EppCrypto(account: account)
+            let ok = (try? crypto.decrypt(crypto.encrypt(Data("check".utf8)))) == Data("check".utf8)
+            print("CRYPTO \(ok ? "OK" : "FAIL") certificateSigned=\(EppCrypto.isCertificateSigned)")
+            NSApp.terminate(nil)
+        }
         // -debugCycleModules "keepy,clocky" -debugCycleTimes 20 : 켜고 끄기를 반복해 남는 것이 없는지 보고 끝낸다.
         if let list = UserDefaults.standard.string(forKey: "debugCycleModules") {
             let ids = list.split(separator: ",").map(String.init)
