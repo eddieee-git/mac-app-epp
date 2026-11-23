@@ -189,6 +189,7 @@ Modules/<이름>/     기능 하나 (예: Modules/Keepy)
 - [ ] 타이머: 남은 시간 메뉴바 항목, 캘린더 권한 묻기를 실제로 확인
 - [ ] 스티커: 앱 메뉴 합치기(⌘D·서식 등)와 알람 알림을 실제로 눌러 확인
 - [ ] Peeky를 실제로 켜서 확인(권한, 그룹 아이콘, 숨기기·정리, 끄고 켤 때 아이콘이 깨끗이 사라지는지)
-- [ ] 기존 단독 앱의 데이터 가져오기(처음 켤 때 물어보고 복사)
-- [ ] 첫 릴리스(v0.1.0): 저장소 공개, 릴리스 노트, `./scripts/release.sh`
+- [ ] 첫 릴리스(v0.1.0): 저장소 공개, `peeky` → main 합치기·push, `./scripts/release.sh` (노트 `docs/releases/v0.1.0.md`는 씀)
+- [ ] 옛 단독 앱 정리: Floaty·Grabby의 안 올린 커밋 push → 다섯 저장소 README에 "Epp로 옮겼어요" → GitHub 보관(Archive).
+  옛 앱 데이터 가져오기는 만들지 않는다(사용자 혼자 쓰므로 필요 없다고 했다. 2026-11-23).
 - [ ] `../mac-app/scripts/sync-shared.sh`가 Epp에도 AppUpdater를 복사하게 하기(지금은 손으로 복사)
