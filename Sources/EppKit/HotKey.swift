@@ -91,17 +91,49 @@ public final class HotKey {
 
     private var hotKeyRef: EventHotKeyRef?
     private let id: UInt32
+    private let combo: KeyCombo
+
+    private struct WeakKey { weak var key: HotKey? }
+    /// 살아 있는 단축키(잠시 멈추고 되살리려고 기억한다)
+    private static var live: [UInt32: WeakKey] = [:]
+    private static var paused = false
 
     /// 시스템이 등록을 거부하면 nil. 다른 앱과 겹치는 조합은 대부분 거부되지 않고 등록되며, 먼저 등록한 앱이 받는다.
     public init?(combo: KeyCombo, action: @escaping () -> Void) {
         Self.installHandler()
         id = Self.nextID
         Self.nextID += 1
-        let hotKeyID = EventHotKeyID(signature: Self.signature, id: id)
-        guard RegisterEventHotKey(combo.keyCode, combo.modifiers, hotKeyID, GetApplicationEventTarget(), 0, &hotKeyRef) == noErr else {
-            return nil
+        self.combo = combo
+        if !Self.paused {
+            guard register() else { return nil }
         }
         Self.actions[id] = action
+        Self.live[id] = WeakKey(key: self)
+    }
+
+    @discardableResult
+    private func register() -> Bool {
+        let hotKeyID = EventHotKeyID(signature: Self.signature, id: id)
+        return RegisterEventHotKey(combo.keyCode, combo.modifiers, hotKeyID, GetApplicationEventTarget(), 0, &hotKeyRef) == noErr
+    }
+
+    private func unregister() {
+        if let hotKeyRef { UnregisterEventHotKey(hotKeyRef) }
+        hotKeyRef = nil
+    }
+
+    /// 설정에서 새 단축키를 입력하는 동안 모든 전역 단축키를 잠시 푼다(지금 쓰는 키를 눌러도 입력칸이 받게).
+    /// `EppShortcutRow`가 부른다. 기능이 따로 할 일은 없다.
+    public static func pauseAll() {
+        guard !paused else { return }
+        paused = true
+        live.values.forEach { $0.key?.unregister() }
+    }
+
+    public static func resumeAll() {
+        guard paused else { return }
+        paused = false
+        live.values.forEach { $0.key?.register() }
     }
 
     /// 키 코드와 Carbon 보조 키로 바로 등록한다(화면에 보여 줄 키 이름이 필요 없을 때).
@@ -112,7 +144,10 @@ public final class HotKey {
     deinit {
         if let hotKeyRef { UnregisterEventHotKey(hotKeyRef) }
         let id = id
-        MainActor.assumeIsolated { _ = Self.actions.removeValue(forKey: id) }
+        MainActor.assumeIsolated {
+            _ = Self.actions.removeValue(forKey: id)
+            _ = Self.live.removeValue(forKey: id)
+        }
     }
 
     private static func installHandler() {

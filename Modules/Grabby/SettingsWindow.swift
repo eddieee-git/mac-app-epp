@@ -6,8 +6,9 @@ import SwiftUI
 
 /// 바뀌는 즉시 저장되는 설정.
 final class AppSettings: ObservableObject {
-    /// GrabbyModule이 시작할 때 Epp가 준 저장소로 만든 설정을 넣는다.
-    static var shared: AppSettings!
+    /// GrabbyModule이 시작할 때 Epp가 준 저장소로 만든 설정을 넣는다. 그 전에 쓰면 캡처 저장소(GrabbyStorage)로 만든다
+    /// (예전에는 `AppSettings!`라 넣기 전에 쓰면 죽었다).
+    nonisolated(unsafe) static var shared = AppSettings(defaults: GrabbyStorage.defaults)
     private let defaults: UserDefaults
     private let hotKeysKey = "hotKeys"
     private let knownActionsKey = "knownHotKeyActions"
@@ -51,7 +52,6 @@ final class AppSettings: ObservableObject {
         didSet { defaults.set(try? JSONEncoder().encode(hotKeys), forKey: hotKeysKey) }
     }
     /// 단축키를 입력받는 동안에는 전역 단축키를 잠시 풀어 둔다.
-    @Published var isRecordingHotKey = false
     @Published var failedHotKeys: Set<HotKeyAction> = []
 
     /// 화면 언어. Epp 설정 → 일반 → 언어를 따른다(바꾸면 Epp를 다시 연다).
@@ -552,9 +552,6 @@ private struct ColorSwatches: View {
 /// 전역 단축키를 입력받는다. 버튼을 누른 다음 원하는 조합을 누르면 저장한다.
 private struct HotKeyEditor: View {
     @ObservedObject var settings: AppSettings
-    @State private var recording: HotKeyAction?
-    @State private var monitor: Any?
-    @State private var message: String?
     @State private var runningApps = HotKeyConflicts.runningCaptureApps
     @State private var blocked: [String] = []
 
@@ -579,80 +576,25 @@ private struct HotKeyEditor: View {
                 .foregroundStyle(.orange)
         }
         ForEach(HotKeyAction.allCases, id: \.self) { action in
-            LabeledContent(action.title) {
-                HStack(spacing: 8) {
-                    if settings.failedHotKeys.contains(action) {
-                        Text(L("등록하지 못함")).font(.caption).foregroundStyle(.red)
-                    }
-                    Button(recording == action ? L("키를 누르세요") : settings.hotKeys[action.rawValue]?.displayText ?? L("없음")) {
-                        recording == action ? stop() : start(action)
-                    }
-                    .frame(minWidth: 110)
-                    Button {
-                        settings.hotKeys[action.rawValue] = nil
-                    } label: {
-                        Image(systemName: "xmark.circle.fill")
-                    }
-                    .buttonStyle(.borderless)
-                    .disabled(settings.hotKeys[action.rawValue] == nil)
-                    .help(L("단축키 지우기"))
-                }
+            EppShortcutRow(action.title,
+                           combo: Binding(get: { settings.hotKeys[action.rawValue] }, set: { settings.hotKeys[action.rawValue] = $0 }),
+                           defaultCombo: KeyCombo.defaults[action.rawValue],
+                           failed: settings.failedHotKeys.contains(action)) { combo in
+                HotKeyAction.allCases.first { $0 != action && settings.hotKeys[$0.rawValue] == combo }
+                    .map { L("%@에서 쓰는 단축키예요.", $0.title) }
             }
         }
         HStack {
-            Text(message ?? L("다른 캡처 앱과 겹치면 먼저 등록한 앱이 키를 받아요. Esc로 입력 취소."))
-                .font(.caption)
-                .foregroundStyle(message == nil ? Color.secondary : Color.red)
+            Text(L("다른 캡처 앱과 겹치면 먼저 등록한 앱이 키를 받아요. Esc로 입력 취소.")).font(.caption).foregroundStyle(.secondary)
             Spacer()
-            Button(L("기본값으로")) {
-                stop()
-                settings.hotKeys = KeyCombo.defaults
-            }
+            Button(L("기본값으로")) { settings.hotKeys = KeyCombo.defaults }
         }
-        .onDisappear(perform: stop)
         .onReceive(NotificationCenter.default.publisher(for: NSWindow.didBecomeKeyNotification)) { _ in
             runningApps = HotKeyConflicts.runningCaptureApps
             blocked = HotKeyConflicts.blockedBySystem(settings.hotKeys)
         }
         .onAppear { blocked = HotKeyConflicts.blockedBySystem(settings.hotKeys) }
         .onChange(of: settings.hotKeys) { _, combos in blocked = HotKeyConflicts.blockedBySystem(combos) }
-        .onReceive(NotificationCenter.default.publisher(for: NSWindow.didResignKeyNotification)) { _ in stop() }
-    }
-
-    private func start(_ action: HotKeyAction) {
-        stop()
-        recording = action
-        settings.isRecordingHotKey = true
-        monitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
-            handle(event, for: action)
-            return nil
-        }
-    }
-
-    private func stop() {
-        if let monitor { NSEvent.removeMonitor(monitor) }
-        monitor = nil
-        recording = nil
-        message = nil
-        if settings.isRecordingHotKey { settings.isRecordingHotKey = false }
-    }
-
-    private func handle(_ event: NSEvent, for action: HotKeyAction) {
-        if event.keyCode == 53 { // Esc
-            stop()
-            return
-        }
-        guard let combo = KeyCombo(event: event) else {
-            message = L("⌘, ⌃, ⌥ 중 하나와 함께 누르세요.")
-            return
-        }
-
-        if let other = HotKeyAction.allCases.first(where: { $0 != action && settings.hotKeys[$0.rawValue] == combo }) {
-            message = L("%@에서 쓰는 단축키예요.", other.title)
-            return
-        }
-        settings.hotKeys[action.rawValue] = combo
-        stop()
     }
 }
 

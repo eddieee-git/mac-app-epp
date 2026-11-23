@@ -79,7 +79,6 @@ final class ClockySettings: ObservableObject {
     /// 다른 앱이 이미 쓰는 등의 이유로 등록하지 못한 단축키.
     @Published var failedHotKeys: Set<HotKeyAction> = []
     /// 단축키를 새로 누르는 동안에는 등록을 풀어 둔다. 그래야 지금 단축키도 다시 고를 수 있다.
-    @Published var isRecordingHotKey = false
     /// defaults: Epp가 준 타이머 기능 전용 저장소(점검에서는 임시 저장소).
     init(defaults: UserDefaults = ClockyStorage.defaults) {
         self.defaults = defaults
@@ -257,7 +256,7 @@ enum Localization {
         ("윈도우", "Window"),
         ("전역 단축키", "Global shortcuts"),
         ("타이머 설정…", "Timer Settings…"),
-        ("타이머가 돌거나 알람이 1시간 안에 울리면 메뉴바에 남은 시간이 따로 보여요.", "While a timer runs or an alarm is due within an hour, the time left shows in the menu bar."),
+        ("타이머가 돌거나 알람이 1시간 안에 울리면 Epp 아이콘 옆에 남은 시간이 보여요.", "While a timer runs or an alarm is due within an hour, the time left shows next to the Epp icon."),
         // 메뉴
         ("%@ · 일시정지 %@", "%@ · paused %@"),
         ("%@ · %@ (%@ 남음)", "%@ · %@ (in %@)"),
@@ -367,6 +366,7 @@ enum Localization {
         ("지운 뒤에도 ⌘Z로 되살릴 수 있어요.", "You can bring it back with ⌘Z."),
         // 타이머 목록
         ("스티커", "Stickies"),
+        ("기본값으로", "Restore Defaults"),
         ("타이머 목록", "All Timers & Alarms"),
         ("타이머 목록…", "All Timers & Alarms…"),
         ("전체", "All"),
@@ -415,12 +415,7 @@ enum Localization {
         ("고른 타이머 시작/일시정지", "Start/pause selected timer"),
         ("울림 끄기", "Stop ringing"),
         ("타이머 목록 열기", "Open all timers & alarms"),
-        ("등록하지 못함", "Couldn't register"),
-        ("키를 누르세요", "Press keys"),
-        ("없음", "None"),
-        ("단축키 지우기", "Clear shortcut"),
         ("Esc를 누르면 입력을 취소해요.", "Press Esc to cancel."),
-        ("⌘, ⌃, ⌥ 중 하나와 함께 누르세요.", "Include ⌘, ⌃, or ⌥."),
         ("%@에서 쓰는 단축키예요.", "Already used for %@."),
         // 캘린더
         ("캘린더", "Calendar"),
@@ -480,9 +475,7 @@ enum Localization {
         ("📅 %@ · %@ 시작 (알림까지 %@)", "📅 %@ · starts %@ (alert in %@)"),
         ("일정은 구글 캘린더에서 고쳐요. 알림 시점은 설정 → 캘린더에서 바꿔요.", "Edit events in Google Calendar. Change when alerts ring in Settings → Calendar."),
         // 업데이트
-        ("닫기", "Close"),
         ("파일이 너무 커요.", "The file is too large."),
-        ("휴지통으로 옮기기", "Move to Trash"),
         // 설치 위치
         // 잠자기·놓친 알림·소리 꺼짐
         ("곧 울릴 것이 있으면 Mac이 잠들지 않게", "Keep Mac awake when something will ring soon"),

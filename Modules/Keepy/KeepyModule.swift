@@ -19,7 +19,7 @@ public final class KeepyModule: EppModule {
     private lazy var monitor = ClipboardMonitor(settings: settings) { [weak self] content, app in
         self?.store.add(content, source: app)
     }
-    private lazy var panel = PanelController(store: store) { [weak self] item, plainText in
+    private lazy var panel = PanelController(store: store, panelPosition: { [settings] in settings.panelPosition }) { [weak self] item, plainText in
         self?.paste(item, plainText: plainText)
     }
     private var hotKey: HotKey?
@@ -29,10 +29,8 @@ public final class KeepyModule: EppModule {
 
     public required init(context: EppContext) {
         self.context = context
-        // 기능 안 여러 곳이 AppSettings.shared를 쓰므로 Epp가 준 저장소로 먼저 바꿔 둔다.
         let settings = AppSettings(defaults: context.defaults)
         self.settings = settings
-        AppSettings.shared = settings
         store = HistoryStore(directory: context.dataDirectory,
                              limit: { settings.historyLimit },
                              maxAgeDays: { settings.historyMaxAgeDays })

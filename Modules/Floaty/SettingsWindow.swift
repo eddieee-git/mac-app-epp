@@ -250,14 +250,12 @@ private enum ShortcutSlot: Hashable {
 /// 단축키를 입력받는다. 버튼을 누른 다음 원하는 조합을 누르면 저장한다.
 private struct HotKeyEditor: View {
     @ObservedObject var settings: AppSettings
-    @State private var recording: ShortcutSlot?
-    @State private var monitor: Any?
-    @State private var message: String?
 
     var body: some View {
         Section {
             ForEach(HotKeyAction.allCases, id: \.self) { action in
-                row(.global(action), failed: settings.failedHotKeys.contains(action))
+                EppShortcutRow(action.title, combo: binding(.global(action)), defaultCombo: KeyCombo.defaults[action.rawValue],
+                               failed: settings.failedHotKeys.contains(action)) { clash($0, except: .global(action)) }
             }
         } header: {
             Text(L("전역 단축키"))
@@ -265,7 +263,9 @@ private struct HotKeyEditor: View {
             Text(EppShortcutText.footer).font(.caption).foregroundStyle(.secondary)
         }
         Section {
-            row(.rename, failed: false)
+            EppShortcutRow(ShortcutSlot.rename.title, combo: binding(.rename), defaultCombo: KeyCombo.renameDefault) {
+                clash($0, except: .rename)
+            }
         } header: {
             Text(L("스티커 안 단축키"))
         } footer: {
@@ -275,92 +275,34 @@ private struct HotKeyEditor: View {
         }
         Section {
             HStack {
-                Text(message ?? L("Esc를 누르면 입력을 취소해요."))
-                    .font(.caption)
-                    .foregroundStyle(message == nil ? Color.secondary : Color.red)
+                Text(L("Esc를 누르면 입력을 취소해요.")).font(.caption).foregroundStyle(.secondary)
                 Spacer()
                 Button(L("기본값으로")) {
-                    stop()
                     settings.hotKeys = KeyCombo.defaults
                     settings.renameTitleKey = KeyCombo.renameDefault
                 }
             }
         }
-        .onDisappear(perform: stop)
-        .onReceive(NotificationCenter.default.publisher(for: NSWindow.didResignKeyNotification)) { _ in stop() }
     }
 
-    private func row(_ slot: ShortcutSlot, failed: Bool) -> some View {
-        LabeledContent(slot.title) {
-            HStack(spacing: 8) {
-                if failed {
-                    Text(L("등록하지 못함")).font(.caption).foregroundStyle(.red)
-                }
-                Button(recording == slot ? L("키를 누르세요") : combo(for: slot)?.displayText ?? L("없음")) {
-                    recording == slot ? stop() : start(slot)
-                }
-                .frame(minWidth: 110)
-                Button {
-                    setCombo(nil, for: slot)
-                } label: {
-                    Image(systemName: "xmark.circle.fill")
-                }
-                .buttonStyle(.borderless)
-                .disabled(combo(for: slot) == nil)
-                .help(L("단축키 지우기"))
+    private func binding(_ slot: ShortcutSlot) -> Binding<KeyCombo?> {
+        Binding(get: {
+            switch slot {
+            case .global(let action): return settings.hotKeys[action.rawValue]
+            case .rename: return settings.renameTitleKey
             }
-        }
+        }, set: { combo in
+            switch slot {
+            case .global(let action): settings.hotKeys[action.rawValue] = combo
+            case .rename: settings.renameTitleKey = combo
+            }
+        })
     }
 
-    private func combo(for slot: ShortcutSlot) -> KeyCombo? {
-        switch slot {
-        case .global(let action): return settings.hotKeys[action.rawValue]
-        case .rename: return settings.renameTitleKey
-        }
-    }
-
-    private func setCombo(_ combo: KeyCombo?, for slot: ShortcutSlot) {
-        switch slot {
-        case .global(let action): settings.hotKeys[action.rawValue] = combo
-        case .rename: settings.renameTitleKey = combo
-        }
-    }
-
-    private func start(_ slot: ShortcutSlot) {
-        stop()
-        recording = slot
-        settings.isRecordingHotKey = true
-        monitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
-            handle(event, for: slot)
-            return nil
-        }
-    }
-
-    private func stop() {
-        if let monitor { NSEvent.removeMonitor(monitor) }
-        monitor = nil
-        recording = nil
-        message = nil
-        if settings.isRecordingHotKey { settings.isRecordingHotKey = false }
-    }
-
-    private func handle(_ event: NSEvent, for slot: ShortcutSlot) {
-        if event.keyCode == 53 { // Esc
-            stop()
-            return
-        }
-        guard let combo = KeyCombo(event: event) else {
-            message = L("⌘, ⌃, ⌥ 중 하나와 함께 누르세요.")
-            return
-        }
-        // 전역 단축키가 먼저 가로채므로 스티커 안 단축키와도 겹치면 안 된다.
+    /// 전역 단축키가 먼저 가로채므로 스티커 안 단축키와도 겹치면 안 된다.
+    private func clash(_ combo: KeyCombo, except slot: ShortcutSlot) -> String? {
         let others: [ShortcutSlot] = HotKeyAction.allCases.map { .global($0) } + [.rename]
-        if let other = others.first(where: { $0 != slot && self.combo(for: $0) == combo }) {
-            message = L("%@에서 쓰는 단축키예요.", other.title)
-            return
-        }
-        setCombo(combo, for: slot)
-        stop()
+        return others.first { $0 != slot && binding($0).wrappedValue == combo }.map { L("%@에서 쓰는 단축키예요.", $0.title) }
     }
 }
 

@@ -23,11 +23,11 @@ final class HistoryStore: ObservableObject {
     private(set) var lastDeleted: (item: ClipItem, index: Int)?
 
     /// directory: Epp가 정해 준 Keepy 데이터 폴더(점검할 때는 임시 폴더). limit이 없으면 설정의 한도를 쓴다.
-    init(directory: URL, limit: (() -> Int)? = nil, maxAgeDays: (() -> Int)? = nil,
+    init(directory: URL, limit: @escaping () -> Int, maxAgeDays: @escaping () -> Int,
          crypto: EppCrypto = EppCrypto(account: "keepy-history")) {
         self.directory = directory
-        self.limit = limit ?? { AppSettings.shared.historyLimit }
-        self.maxAgeDays = maxAgeDays ?? { AppSettings.shared.historyMaxAgeDays }
+        self.limit = limit
+        self.maxAgeDays = maxAgeDays
         self.crypto = crypto
         blobDirectory = directory.appendingPathComponent("blobs", isDirectory: true)
         indexURL = directory.appendingPathComponent("history.json")

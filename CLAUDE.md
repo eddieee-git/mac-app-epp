@@ -108,7 +108,7 @@ Modules/<이름>/     기능 하나 (예: Modules/Keepy)
 
 원본: ../Keepy 0.1.2 (커밋 2801840). 바뀐 점:
 - `AppDelegate` → `KeepyModule`. 앱 아이콘으로 열기(copyOnly), 로그인 항목으로 켜졌는지 확인은 뺐다.
-- `AppSettings.shared`는 `KeepyModule`이 `context.defaults`로 만들어 넣는다.
+- 설정(`AppSettings`)은 `KeepyModule`이 `context.defaults`로 만들어 기록 저장소·기록 창에 넘긴다(전역값 없음).
 - 설정: 일반 · 제외 앱 · 단축키 (정보·로그인·언어·업데이트는 본체로).
 - 시작 안내 창(WelcomeWindow)을 지우고 설정 맨 위 시작하기 상자로 바꿨다. 권한 없이 붙여 넣으면 `context.showGettingStarted()`.
 - 단축키 겹침 경고에 단독 Keepy 앱(`com.eddieee.Keepy`)도 넣었다.
@@ -125,7 +125,7 @@ Modules/<이름>/     기능 하나 (예: Modules/Keepy)
 - 숨기기가 Epp 아이콘까지 밀어내지 않게 `context.hostStatusItems()`를 보호 목록에 넣는다. Epp 아이콘은 `autosaveName = "EppMain"`, 처음 자리는 오른쪽 끝에서 170.
 - 오른쪽 클릭 메뉴의 "Peeky 종료"와 업데이트 항목을 뺐다(종료는 Epp 메뉴). 설정에서 로그인·언어·업데이트·정보를 뺐다.
 - 진단 로그: 자기 로그 파일·설정을 없애고 `ItemStore.log` → `EppLog.write("메뉴바", …)`.
-- `Preferences.shared`가 `Preferences!`라서 `let prefs = Preferences.shared`처럼 쓰면 Optional이 된다. 타입을 적는다(`let prefs: Preferences = …`).
+- `Preferences.shared`는 처음 쓸 때 PeekyStorage로 만들고, `PeekyModule.init`이 Epp가 준 저장소로 바꿔 넣는다.
 
 ## Floaty (Modules/Floaty) = 스티커
 
@@ -160,7 +160,7 @@ Modules/<이름>/     기능 하나 (예: Modules/Keepy)
 - 앱 메뉴(파일: 캡처 창 열기·저장 ⌘S, 윈도우: 최소화 ⌘M 등)는 `mainMenus()`.
 - 알림 `Toast`는 `EppToast`를 부르는 얇은 껍데기. 탭 창 제목은 "캡처 보관함".
 - 저장은 `GrabbyStorage.defaults`·`folder`. 탭 보관함 `<Epp>/Grabby/Captures`, 띄운 캡처 `<Epp>/Grabby/Pins`.
-  `AppSettings.shared`는 `AppSettings!`라 `let settings: AppSettings = AppSettings.shared`처럼 타입을 적는다.
+  `AppSettings.shared`는 처음 쓸 때 GrabbyStorage로 만들고, `GrabbyModule.init`이 Epp가 준 저장소로 바꿔 넣는다.
 - 동작 기록(`EventLog`)은 따로 파일을 쓰지 않고 `EppLog.write("캡처", …)`(진단 로그를 켰을 때만).
 - 화면 기록 권한이 없을 때 캡처하면 시스템에 묻고 `context.showGettingStarted()`로 캡처 설정(시작하기)을 연다. 권한 줄은 Epp 일반 → 권한.
 - 정보 탭의 보관함 크기·캡처 폴더 열기는 저장 탭으로 옮겼다. 점검은 업데이트·AppPresence 묶음을 뺐다.
@@ -204,6 +204,8 @@ Modules/<이름>/     기능 하나 (예: Modules/Keepy)
   (닫기·최소화·크기 조절, 지금 데스크톱에 열기, 자리 기억 `Epp.<이름>`, Epp를 쓰는 동안 스티커 위에 뜸). 열 때는 `EppWindows.show`.
   창 제목과 여는 메뉴 이름을 같게: "<기능> <무엇>"(스티커 관리…, 타이머 목록…, 캡처 보관함…).
 - **테마**: Epp 하나(설정 → 일반 → 테마, `EppAppTheme` → `NSApp.appearance`). 기능마다 테마 설정·창별 appearance를 두지 않는다.
+- **단축키 입력**: 키 하나를 고르는 칸은 모두 `EppShortcutRow`(같은 기능 안 겹침은 `validate`로). 입력하는 동안 `HotKey.pauseAll()`로
+  모든 전역 단축키를 잠시 풀어서 지금 쓰는 키를 눌러도 입력칸이 받는다. 기능이 "입력 중" 표시를 따로 두지 않는다.
 - **짧은 알림**: `EppToast.show(글, symbol:/image:, action:, place:)` 하나만 쓴다(모양·위치·시간이 같게). 기능이 따로 토스트 창을 만들지 않는다.
 - **알람**: 울릴 시각이 있는 기능은 `EppAlertBoard.shared.publish`로 올린다. 타이머가 켜져 있으면 타이머가 타이머 알람과 똑같이 울리고
   (`hasRinger`), 알린 기능은 자기 소리·알림을 내지 않는다. 끄기·다시 울림은 양쪽에 전해진다(`ringerDid`/`sourceDismissed`).
@@ -221,7 +223,9 @@ Modules/<이름>/     기능 하나 (예: Modules/Keepy)
 - [ ] 타이머: 남은 시간 메뉴바 항목, 캘린더 권한 묻기를 실제로 확인
 - [ ] 스티커: 앱 메뉴 합치기(⌘D·서식 등)와 알람 알림을 실제로 눌러 확인
 - [ ] Peeky를 실제로 켜서 확인(권한, 그룹 아이콘, 숨기기·정리, 끄고 켤 때 아이콘이 깨끗이 사라지는지)
-- [ ] 첫 릴리스(v0.1.0): 저장소 공개, `./scripts/release.sh` (노트 `docs/releases/v0.1.0.md`는 씀)
+- [ ] 다른 Mac에서 써 보기(릴리스 빌드 dmg를 옮겨 설치). 특히 인증서를 믿게 하지 않은 Mac에서 손쉬운 사용·화면 기록 권한이 먹는지.
+  안 먹으면: 릴리스는 임시 서명으로 되돌리거나, 설치 안내에 인증서 믿기 단계를 넣는다.
+- [ ] 첫 릴리스(v0.1.0): 저장소 공개, `./scripts/release.sh` (노트 `docs/releases/v0.1.0.md`, README 정리함)
 - [ ] 옛 단독 앱 정리: 릴리스 뒤 **사용자가 따로 말하면** 옛 저장소 5개·설치된 앱·코드 폴더를 지운다(그전에는 건드리지 않는다).
   앞으로는 Epp 하나로 관리한다. 옛 앱 데이터 가져오기는 만들지 않는다(사용자 혼자 쓰므로 필요 없다고 했다. 2026-11-23).
 - [ ] `../mac-app/scripts/sync-shared.sh`가 Epp에도 AppUpdater를 복사하게 하기(지금은 손으로 복사)

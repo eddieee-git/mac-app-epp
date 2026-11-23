@@ -65,9 +65,9 @@ public final class ClockyModule: NSObject, EppModule, NSMenuDelegate {
                 DispatchQueue.main.async { self.map { $0.sleepGuard.update(needsAwake: $0.window.store.needsMacAwake) } }
             }
             .store(in: &subscriptions)
-        // 단축키를 새로 누르는 동안에는 모두 풀어 둔다.
-        settings.$hotKeys.combineLatest(settings.$isRecordingHotKey)
-            .sink { [weak self] combos, isRecording in self?.registerHotKeys(isRecording ? [:] : combos) }
+        // 설정에서 단축키를 바꾸면 바로 다시 등록한다(입력받는 동안에는 EppShortcutRow가 모든 단축키를 잠시 푼다).
+        settings.$hotKeys
+            .sink { [weak self] combos in self?.registerHotKeys(combos) }
             .store(in: &subscriptions)
         // 설정에서 메뉴바 표시를 바꾸면 바로 고친다.
         settings.objectWillChange
@@ -396,6 +396,6 @@ struct ClockyGettingStarted: View {
             .init(L("시계 창에서 알람 켜기"), done: store.alarms.contains { $0.enabled }),
             .init(L("(선택) 캘린더 탭에서 일정 연결하기"),
                   done: !settings.calendarFeeds.isEmpty || settings.macCalendarEnabled),
-        ], footer: L("타이머가 돌거나 알람이 1시간 안에 울리면 메뉴바에 남은 시간이 따로 보여요."))
+        ], footer: L("타이머가 돌거나 알람이 1시간 안에 울리면 Epp 아이콘 옆에 남은 시간이 보여요."))
     }
 }

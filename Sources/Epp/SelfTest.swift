@@ -91,6 +91,20 @@ enum SelfTest {
         board.onEvent(from: "test", nil)
         expect(!board.hasRinger && !board.alerts.contains(alert), "기능을 끄면 정리")
 
+                print("[Epp] 단축키 잠시 풀기")
+        let rare = KeyCombo(keyCode: UInt32(kVK_F19), modifiers: UInt32(controlKey | optionKey | shiftKey | cmdKey), key: "F19")
+        let before = HotKey.registeredCount
+        var probe: HotKey? = HotKey(combo: rare) {}
+        expect(probe != nil && HotKey.registeredCount == before + 1, "등록")
+        HotKey.pauseAll()
+        let whilePaused = HotKey(combo: rare) {}
+        expect(whilePaused != nil, "입력받는 동안 새로 등록해도 기다렸다가 되살림")
+        HotKey.resumeAll()
+        probe = nil
+        _ = probe
+        expect(HotKey.registeredCount == before + 1, "없앤 단축키는 목록에서 빠짐(남은 건 입력 중에 만든 하나)")
+        _ = whilePaused
+
                 var ok = failures == 0
         for type in ModuleList.all {
             print("[\(type.info.name)]")

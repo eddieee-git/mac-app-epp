@@ -14,7 +14,6 @@ enum Localization {
         ("메뉴", "the menu"),
         ("메뉴의 스티커 관리에서 숨긴 스티커까지 모두 보기", "See every sticky, hidden ones too, in Manage Stickies from the menu"),
         ("스티커 오른쪽 위 단추로 항상 위, 색, 알람, 잠그기를 정해요. 지운 스티커는 휴지통에서 되살릴 수 있어요.", "Use the buttons at a sticky's top right for always on top, color, alarm and lock. Deleted stickies can be restored from the trash."),
-        ("스티커와 스티커 관리 창에만 적용돼요.", "Applies only to stickies and the Manage Stickies window."),
         // 메뉴
         ("파일", "File"),
         ("찾기…", "Find…"),
@@ -123,11 +122,7 @@ enum Localization {
         ("현재 스티커 최소화/펼치기", "Collapse/Expand Current Sticky"),
         ("현재 스티커 숨기기/표시", "Hide/Show Current Sticky"),
         ("현재 스티커 삭제", "Delete Current Sticky"),
-        ("등록하지 못함", "Couldn't register"),
-        ("키를 누르세요", "Press keys"),
-        ("단축키 지우기", "Clear shortcut"),
         ("Esc를 누르면 입력을 취소해요.", "Press Esc to cancel."),
-        ("⌘, ⌃, ⌥ 중 하나와 함께 누르세요.", "Include ⌘, ⌃, or ⌥."),
         ("%@에서 쓰는 단축키예요.", "Already used by %@."),
 
         // 파일
@@ -220,7 +215,6 @@ enum Localization {
         ("투명도는 새 스티커에만 적용", "Apply opacity to new stickies only"),
         ("아래 줄 기본 표시", "Bottom bar shows"),
         ("삭제하기 전에 확인", "Confirm before deleting"),
-        ("테마", "Theme"),
         ("없음", "None"),
         ("파일 선택…", "Choose File…"),
         ("들어 보기", "Play"),

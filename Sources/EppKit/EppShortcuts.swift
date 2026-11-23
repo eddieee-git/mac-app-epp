@@ -22,13 +22,17 @@ public struct EppShortcutRow: View {
     let defaultCombo: KeyCombo?
     /// 시스템에 등록하지 못했는지
     let failed: Bool
+    /// 새 조합을 받기 전에 확인한다(같은 기능 안에서 겹침 등). 문제가 있으면 알릴 글, 없으면 nil.
+    let validate: ((KeyCombo) -> String?)?
 
     @State private var recording = false
     @State private var monitor: Any?
     @State private var message: String?
 
-    public init(_ title: String, combo: Binding<KeyCombo?>, defaultCombo: KeyCombo?, failed: Bool = false) {
+    public init(_ title: String, combo: Binding<KeyCombo?>, defaultCombo: KeyCombo?, failed: Bool = false,
+                validate: ((KeyCombo) -> String?)? = nil) {
         self.title = title
+        self.validate = validate
         _combo = combo
         self.defaultCombo = defaultCombo
         self.failed = failed
@@ -80,6 +84,7 @@ public struct EppShortcutRow: View {
     private func start() {
         stop()
         recording = true
+        HotKey.pauseAll()
         monitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
             handle(event)
             return nil
@@ -89,6 +94,7 @@ public struct EppShortcutRow: View {
     private func stop() {
         if let monitor { NSEvent.removeMonitor(monitor) }
         monitor = nil
+        if recording { HotKey.resumeAll() }
         recording = false
         message = nil
     }
@@ -100,6 +106,10 @@ public struct EppShortcutRow: View {
         }
         guard let newCombo = KeyCombo(event: event) else {
             message = EppText.t("⌘, ⌃, ⌥ 중 하나와 함께 누르세요.", "Press it together with ⌘, ⌃ or ⌥.")
+            return
+        }
+        if let problem = validate?(newCombo) {
+            message = problem
             return
         }
         combo = newCombo

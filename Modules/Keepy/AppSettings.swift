@@ -23,8 +23,6 @@ enum PanelPosition: String, CaseIterable, Identifiable {
 /// UserDefaults에 저장하는 설정. 바꾸면 바로 저장한다.
 @MainActor
 final class AppSettings: ObservableObject {
-    /// KeepyModule이 시작할 때 Epp가 준 저장소로 만든 설정을 넣는다.
-    static var shared: AppSettings!
 
     static let historyLimits = [50, 100, 200, 500, 1000]
     static let defaultHistoryLimit = 200

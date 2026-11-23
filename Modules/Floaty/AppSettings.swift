@@ -91,7 +91,6 @@ final class AppSettings: ObservableObject {
         didSet { defaults.set(renameTitleKey.flatMap { try? JSONEncoder().encode($0) } ?? Data(), forKey: Keys.renameTitleKey) }
     }
     /// 단축키를 입력받는 동안에는 눌러도 동작하지 않게 등록을 풀어 둔다.
-    @Published var isRecordingHotKey = false
     /// 시스템이 거부해 등록하지 못한 동작.
     @Published var failedHotKeys: Set<HotKeyAction> = []
     /// 화면 언어. Epp 설정 → 일반 → 언어를 따른다(바꾸면 Epp를 다시 연다).

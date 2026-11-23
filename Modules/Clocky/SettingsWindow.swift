@@ -266,80 +266,22 @@ private struct PresetEditor: View {
 /// 전역 단축키를 바꾼다. 버튼을 누른 뒤 새 조합을 누르면 바로 등록된다.
 private struct HotKeyEditor: View {
     @ObservedObject var settings: ClockySettings
-    @State private var recording: HotKeyAction?
-    @State private var monitor: Any?
-    @State private var message: String?
 
     var body: some View {
         ForEach(HotKeyAction.allCases, id: \.self) { action in
-            LabeledContent(action.title) {
-                HStack(spacing: 8) {
-                    if settings.failedHotKeys.contains(action) {
-                        Text(L("등록하지 못함")).font(.caption).foregroundStyle(.red)
-                    }
-                    Button(recording == action ? L("키를 누르세요") : settings.hotKeys[action.rawValue]?.displayText ?? L("없음")) {
-                        recording == action ? stop() : start(action)
-                    }
-                    .frame(minWidth: 110)
-                    Button {
-                        settings.hotKeys[action.rawValue] = nil
-                    } label: {
-                        Image(systemName: "xmark.circle.fill")
-                    }
-                    .buttonStyle(.borderless)
-                    .disabled(settings.hotKeys[action.rawValue] == nil)
-                    .help(L("단축키 지우기"))
-                    .accessibilityLabel(L("단축키 지우기"))
-                }
+            EppShortcutRow(action.title,
+                           combo: Binding(get: { settings.hotKeys[action.rawValue] }, set: { settings.hotKeys[action.rawValue] = $0 }),
+                           defaultCombo: KeyCombo.defaults[action.rawValue],
+                           failed: settings.failedHotKeys.contains(action)) { combo in
+                HotKeyAction.allCases.first { $0 != action && settings.hotKeys[$0.rawValue] == combo }
+                    .map { L("%@에서 쓰는 단축키예요.", $0.title) }
             }
         }
         HStack {
-            Text(message ?? L("Esc를 누르면 입력을 취소해요."))
-                .font(.caption)
-                .foregroundStyle(message == nil ? Color.secondary : Color.red)
+            Text(L("Esc를 누르면 입력을 취소해요.")).font(.caption).foregroundStyle(.secondary)
             Spacer()
-            Button(L("기본값")) {
-                stop()
-                settings.hotKeys = KeyCombo.defaults
-            }
+            Button(L("기본값으로")) { settings.hotKeys = KeyCombo.defaults }
         }
-        .onDisappear(perform: stop)
-        .onReceive(NotificationCenter.default.publisher(for: NSWindow.didResignKeyNotification)) { _ in stop() }
-    }
-
-    private func start(_ action: HotKeyAction) {
-        stop()
-        recording = action
-        settings.isRecordingHotKey = true
-        monitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
-            handle(event, for: action)
-            return nil
-        }
-    }
-
-    private func stop() {
-        if let monitor { NSEvent.removeMonitor(monitor) }
-        monitor = nil
-        recording = nil
-        message = nil
-        if settings.isRecordingHotKey { settings.isRecordingHotKey = false }
-    }
-
-    private func handle(_ event: NSEvent, for action: HotKeyAction) {
-        if event.keyCode == 53 { // Esc
-            stop()
-            return
-        }
-        guard let combo = KeyCombo(event: event) else {
-            message = L("⌘, ⌃, ⌥ 중 하나와 함께 누르세요.")
-            return
-        }
-        if let other = HotKeyAction.allCases.first(where: { $0 != action && settings.hotKeys[$0.rawValue] == combo }) {
-            message = L("%@에서 쓰는 단축키예요.", other.title)
-            return
-        }
-        settings.hotKeys[action.rawValue] = combo
-        stop()
     }
 }
 

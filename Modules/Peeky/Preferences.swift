@@ -46,8 +46,8 @@ enum HotKeyModifiers: Int, CaseIterable, Identifiable {
 
 @MainActor
 final class Preferences: ObservableObject {
-    /// PeekyModule이 시작할 때 Epp가 준 저장소로 만든 설정을 넣는다.
-    static var shared: Preferences!
+    /// PeekyModule이 시작할 때 Epp가 준 저장소로 만든 설정을 넣는다. 그 전에 쓰면 PeekyStorage로 만든다(예전에는 `Preferences!`).
+    static var shared = Preferences(defaults: PeekyStorage.defaults)
     private let defaults: UserDefaults
 
     /// Groups, in the order their icons are created. Never empty.

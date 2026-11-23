@@ -17,8 +17,12 @@ final class PanelController: NSObject, NSWindowDelegate {
     private let onPick: (ClipItem, Bool) -> Void
     private var keyMonitor: Any?
 
-    init(store: HistoryStore, onPick: @escaping (ClipItem, Bool) -> Void) {
+    /// 기록 창을 띄울 자리(설정)
+    private let panelPosition: () -> PanelPosition
+
+    init(store: HistoryStore, panelPosition: @escaping () -> PanelPosition, onPick: @escaping (ClipItem, Bool) -> Void) {
         self.onPick = onPick
+        self.panelPosition = panelPosition
         viewModel = PanelViewModel(store: store)
         panel = KeyablePanel(
             contentRect: NSRect(x: 0, y: 0, width: HistoryView.size.width, height: HistoryView.size.height),
@@ -96,7 +100,7 @@ final class PanelController: NSObject, NSWindowDelegate {
         let size = panel.frame.size
 
         var origin: NSPoint
-        switch AppSettings.shared.panelPosition {
+        switch panelPosition() {
         case .mouse:
             origin = NSPoint(x: mouse.x - 20, y: mouse.y - size.height + 20)
         case .center:

@@ -46,9 +46,9 @@ public final class GrabbyModule: NSObject, EppModule {
     private let lastDisplayKey = "lastCaptureDisplay"
 
     public func start() {
-        // 설정에서 단축키를 바꾸면 바로 다시 등록한다. 입력받는 동안에는 잠시 풀어 둔다.
-        hotKeySubscription = settings.$hotKeys.combineLatest(settings.$isRecordingHotKey).sink { [weak self] combos, isRecording in
-            self?.registerHotKeys(isRecording ? [:] : combos)
+        // 설정에서 단축키를 바꾸면 바로 다시 등록한다(입력받는 동안에는 EppShortcutRow가 모든 단축키를 잠시 푼다).
+        hotKeySubscription = settings.$hotKeys.sink { [weak self] combos in
+            self?.registerHotKeys(combos)
             self?.updateHotKeyItems(combos)
         }
         _ = CaptureStore.shared
