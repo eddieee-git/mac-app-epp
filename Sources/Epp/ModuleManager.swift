@@ -19,6 +19,8 @@ final class ModuleManager: ObservableObject {
     var onChange: () -> Void = {}
     /// 본체의 메뉴바 아이콘(본체가 채운다).
     var hostStatusItems: () -> [NSStatusItem] = { [] }
+    /// 기능이 Epp 아이콘 옆에 붙이는 글(본체가 채운다). (기능 id, 글 또는 nil)
+    var setStatusText: (String, String?) -> Void = { _, _ in }
 
     init(soloID: String?) {
         self.soloID = soloID
@@ -41,7 +43,8 @@ final class ModuleManager: ObservableObject {
         for type in enabledTypes { launch(type) }
     }
 
-    func setEnabled(_ id: String, _ on: Bool) {
+    /// showSettings: 처음 켠 기능이면 그 설정(시작하기)을 연다. 일반 쪽 목록에서 여러 개를 켤 때는 false(쪽이 넘어가지 않게).
+    func setEnabled(_ id: String, _ on: Bool, showSettings: Bool = true) {
         guard soloID == nil, let type = ModuleList.type(id: id), on != isEnabled(id) else { return }
         if on {
             enabledIDs.append(id)
@@ -50,11 +53,12 @@ final class ModuleManager: ObservableObject {
             let key = "\(id).everEnabled"
             if !UserDefaults.standard.bool(forKey: key) {
                 UserDefaults.standard.set(true, forKey: key)
-                openSettings(id)
+                if showSettings { openSettings(id) }
             }
         } else {
             enabledIDs.removeAll { $0 == id }
             running.removeValue(forKey: id)?.stop()
+            setStatusText(id, nil)
         }
         UserDefaults.standard.set(enabledIDs, forKey: Self.enabledKey)
         onChange()
@@ -85,6 +89,7 @@ final class ModuleManager: ObservableObject {
                 try? await Task.sleep(for: .milliseconds(150))
                 guard let module = running.removeValue(forKey: id) else { continue }
                 module.stop()
+                setStatusText(id, nil)
                 weak var weakModule = module as AnyObject
                 released.append { weakModule == nil }
             }
@@ -138,6 +143,7 @@ final class ModuleManager: ObservableObject {
                           openSettings: { [weak self] in self?.openSettings(info.id) },
                           openPermissions: { [weak self] in self?.openSettings("general") },
                           hostStatusItems: { [weak self] in self?.hostStatusItems() ?? [] },
-                          appName: Self.folderName)
+                          appName: Self.folderName,
+                          setStatusText: { [weak self] text in self?.setStatusText(info.id, text) })
     }
 }

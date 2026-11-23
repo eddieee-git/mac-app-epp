@@ -241,19 +241,34 @@ private struct GeneralPage: View {
     var body: some View {
         Form {
             Section {
+                if manager.enabledIDs.isEmpty && manager.soloID == nil {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(L("Epp에 오신 걸 환영해요")).font(.headline)
+                        Text(L("아래에서 쓸 기능을 켜세요. 여러 개를 한꺼번에 켜도 돼요. 켠 기능은 왼쪽 목록에 나오고, 처음 열면 시작하기가 하나씩 안내해요."))
+                            .font(.callout).foregroundStyle(.secondary)
+                    }
+                    .padding(.vertical, 4)
+                }
                 ForEach(ModuleList.infos) { info in
-                    Toggle(isOn: Binding(get: { manager.isEnabled(info.id) },
-                                         set: { manager.setEnabled(info.id, $0) })) {
-                        Label {
-                            VStack(alignment: .leading, spacing: 1) {
-                                Text(info.name)
-                                Text(info.summary).font(.caption).foregroundStyle(.secondary)
+                    HStack {
+                        Toggle(isOn: Binding(get: { manager.isEnabled(info.id) },
+                                             set: { manager.setEnabled(info.id, $0, showSettings: false) })) {
+                            Label {
+                                VStack(alignment: .leading, spacing: 1) {
+                                    Text(info.name)
+                                    Text(info.summary).font(.caption).foregroundStyle(.secondary)
+                                }
+                            } icon: {
+                                Image(systemName: info.symbol)
                             }
-                        } icon: {
-                            Image(systemName: info.symbol)
+                        }
+                        .disabled(manager.soloID != nil)
+                        if manager.isEnabled(info.id) && manager.soloID == nil {
+                            Button(L("설정 열기")) { router.go(page: info.id, tab: nil) }
+                                .buttonStyle(.link)
+                                .help(L("%@ 설정과 시작하기를 열어요.", info.name))
                         }
                     }
-                    .disabled(manager.soloID != nil)
                 }
             } header: {
                 Text(L("기능"))

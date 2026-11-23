@@ -40,6 +40,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, UNUser
         super.init()
         manager.openSettings = { [weak self] id in self?.showSettings(page: id) }
         manager.hostStatusItems = { [weak self] in [self?.statusItem].compactMap { $0 } }
+        manager.setStatusText = { [weak self] id, text in self?.setStatusText(text, for: id) }
         // 기능을 켜고 끌 때마다 기능이 더한 앱 메뉴(파일·서식 등)를 다시 모은다.
         manager.onChange = { [weak self] in self?.rebuildMainMenu() }
     }
@@ -81,6 +82,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, UNUser
         #if DEBUG
         if let page = UserDefaults.standard.string(forKey: "openSettingsPage") {
             showSettings(page: page)
+        }
+        // -debugStatusText "⏰04:59" : 타이머처럼 Epp 아이콘 옆에 글을 붙여 본다.
+        if let text = UserDefaults.standard.string(forKey: "debugStatusText") {
+            setStatusText(text, for: "clocky")
         }
         // -debugCryptoCheck <account> : 그 이름으로 키를 만들어 암호화·풀기를 해 보고 결과를 출력한다(키는 남겨 둠 — 확인 뒤 지운다).
         if let account = UserDefaults.standard.string(forKey: "debugCryptoCheck") {
@@ -181,6 +186,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, UNUser
     }
 
     private var urlGate = RateGate(limit: 5, per: 10)
+
+    /// 기능이 Epp 아이콘 옆에 붙인 글. 기능 목록 순서로 이어 붙인다.
+    private var statusTexts: [String: String] = [:]
+
+    private func setStatusText(_ text: String?, for id: String) {
+        statusTexts[id] = text?.isEmpty == false ? text : nil
+        let joined = ModuleList.all.compactMap { statusTexts[$0.info.id] }.joined(separator: "  ")
+        guard let button = statusItem?.button, button.title != (joined.isEmpty ? "" : " " + joined) else { return }
+        button.imagePosition = joined.isEmpty ? .imageOnly : .imageLeading
+        button.font = .monospacedDigitSystemFont(ofSize: NSFont.systemFontSize, weight: .regular)
+        button.title = joined.isEmpty ? "" : " " + joined
+        statusItem.length = joined.isEmpty ? NSStatusItem.squareLength : NSStatusItem.variableLength
+    }
 
     @objc func openSettings() { showSettings(page: nil) }
 

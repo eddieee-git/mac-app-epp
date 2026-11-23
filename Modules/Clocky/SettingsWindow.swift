@@ -11,7 +11,7 @@ enum ClockySettingsTabs {
         func view(_ tab: SettingsView.Tab) -> SettingsView { SettingsView(settings: settings, calendar: calendar, tab: tab) }
         return [
             EppSettingsTab("general", L("일반"), keywords: [L("삭제하기 전에 확인"), L("메뉴바"), L("타이머 남은 시간 표시"),
-                                                          L("1시간 안에 울릴 알람까지 남은 시간 표시")]) { view(.general) },
+                                                          L("1시간 안에 울릴 알람까지 남은 시간 표시"), L("Epp 아이콘과 따로 보이기")]) { view(.general) },
             EppSettingsTab("clock", L("타이머·알람"), keywords: [L("타이머 버튼(분)")]) { view(.clock) },
             EppSettingsTab("sound", L("소리"), keywords: [L("소리")]) { view(.sound) },
             EppSettingsTab("calendar", L("캘린더"), keywords: [L("캘린더")]) { view(.calendar) },
@@ -68,9 +68,15 @@ struct SettingsView: View {
             Section {
                 Toggle(L("삭제하기 전에 확인"), isOn: $settings.confirmDelete)
             }
-            Section(L("메뉴바")) {
+            Section {
                 Toggle(L("타이머 남은 시간 표시"), isOn: $settings.menuBarShowsTimer)
                 Toggle(L("1시간 안에 울릴 알람까지 남은 시간 표시"), isOn: $settings.menuBarShowsAlarm)
+                Toggle(L("Epp 아이콘과 따로 보이기"), isOn: $settings.menuBarSeparateItem)
+            } header: {
+                Text(L("메뉴바"))
+            } footer: {
+                Text(L("끄면 남은 시간이 Epp 아이콘 바로 옆에 붙어서 메뉴바 아이콘이 늘지 않아요. 켜면 따로 생긴 항목을 눌러 타이머 메뉴를 바로 열 수 있어요."))
+                    .font(.caption).foregroundStyle(.secondary)
             }
         }
         .formStyle(.grouped)

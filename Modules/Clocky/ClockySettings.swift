@@ -49,6 +49,8 @@ final class ClockySettings: ObservableObject {
     @Published var keepMacAwake: Bool { didSet { defaults.set(keepMacAwake, forKey: Keys.keepMacAwake) } }
     @Published var menuBarShowsTimer: Bool { didSet { defaults.set(menuBarShowsTimer, forKey: Keys.menuBarTimer) } }
     @Published var menuBarShowsAlarm: Bool { didSet { defaults.set(menuBarShowsAlarm, forKey: Keys.menuBarAlarm) } }
+    /// 남은 시간을 Epp 아이콘 옆이 아니라 따로 메뉴바 항목으로 보일지(기본 끔: 아이콘을 늘리지 않는다)
+    @Published var menuBarSeparateItem: Bool { didSet { defaults.set(menuBarSeparateItem, forKey: "menuBarSeparateItem") } }
     /// 지우기 전에 묻는다. 꺼 두어도 ⌘Z로 되살릴 수 있다.
     @Published var confirmDelete: Bool { didSet { defaults.set(confirmDelete, forKey: Keys.confirmDelete) } }
     /// 타이머 시간 버튼(분). 1~6개.
@@ -91,6 +93,7 @@ final class ClockySettings: ObservableObject {
             .flatMap { Self.soundLimitChoices.contains($0) ? $0 : nil } ?? 60
         menuBarShowsTimer = defaults.object(forKey: Keys.menuBarTimer) as? Bool ?? true
         menuBarShowsAlarm = defaults.object(forKey: Keys.menuBarAlarm) as? Bool ?? true
+        menuBarSeparateItem = defaults.bool(forKey: "menuBarSeparateItem")
         confirmDelete = defaults.bool(forKey: Keys.confirmDelete)
         timerPresets = (defaults.array(forKey: Keys.presets) as? [Int]).flatMap { Self.validPresets($0) } ?? Self.defaultPresets
         calendarFeeds = defaults.data(forKey: Keys.calendarFeeds)
@@ -337,6 +340,9 @@ enum Localization {
         ("메뉴바", "Menu Bar"),
         ("타이머 남은 시간 표시", "Show timer countdown"),
         ("1시간 안에 울릴 알람까지 남은 시간 표시", "Show countdown to alarms within an hour"),
+        ("Epp 아이콘과 따로 보이기", "Show separately from the Epp icon"),
+        ("끄면 남은 시간이 Epp 아이콘 바로 옆에 붙어서 메뉴바 아이콘이 늘지 않아요. 켜면 따로 생긴 항목을 눌러 타이머 메뉴를 바로 열 수 있어요.",
+         "When off, the time left sits right next to the Epp icon so you don't get another menu bar icon. When on, it gets its own item that opens the timer menu."),
         ("미리 깜빡이기", "Flash before ringing"),
         ("깜빡이지 않음", "Don't flash"),
         ("%d초 전부터", "%d seconds before"),

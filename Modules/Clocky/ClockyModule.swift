@@ -92,6 +92,7 @@ public final class ClockyModule: NSObject, EppModule, NSMenuDelegate {
         window.panel.orderOut(nil)
         if listWindowLoaded { listWindow.close() }
         removeStatusItem()
+        context.setStatusText(nil)
         sleepGuard.update(needsAwake: false)
     }
 
@@ -119,7 +120,17 @@ public final class ClockyModule: NSObject, EppModule, NSMenuDelegate {
         } else if let paused, settings.menuBarShowsTimer {
             title = " " + clockText(paused.remaining(at: now))
         }
-        guard !title.isEmpty else { return removeStatusItem() }
+        guard !title.isEmpty else {
+            context.setStatusText(nil)
+            return removeStatusItem()
+        }
+        guard settings.menuBarSeparateItem else {
+            // Epp 아이콘 옆에 붙인다. 알람이면 알람 시계 글자를 앞에 둔다.
+            removeStatusItem()
+            context.setStatusText((showsAlarm ? "⏰" : "") + title.trimmingCharacters(in: .whitespaces))
+            return
+        }
+        context.setStatusText(nil)
         let item = statusItem ?? makeStatusItem()
         if showsAlarm != showingAlarmIcon || item.button?.image == nil {
             showingAlarmIcon = showsAlarm

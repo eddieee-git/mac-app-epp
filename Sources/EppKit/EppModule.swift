@@ -112,10 +112,15 @@ public final class EppContext {
     public let hostStatusItems: () -> [NSStatusItem]
     /// 진단 로그 같은 파일 이름 앞에 붙일 앱 이름 ("Epp" 또는 "Epp Dev")
     public let appName: String
+    /// Epp 메뉴바 아이콘 옆에 짧은 글(예: 타이머 남은 시간)을 붙인다. nil이면 지운다. 기능을 끄면 본체가 지운다.
+    /// 메뉴바 아이콘을 따로 만들지 않아도 돼서 아이콘이 늘지 않는다.
+    public let setStatusText: (String?) -> Void
 
     public init(moduleID: String, defaults: UserDefaults, dataDirectory: URL, openSettings: @escaping () -> Void,
                 openPermissions: @escaping () -> Void = {},
-                hostStatusItems: @escaping () -> [NSStatusItem] = { [] }, appName: String = "Epp") {
+                hostStatusItems: @escaping () -> [NSStatusItem] = { [] }, appName: String = "Epp",
+                setStatusText: @escaping (String?) -> Void = { _ in }) {
+        self.setStatusText = setStatusText
         self.moduleID = moduleID
         self.openPermissions = openPermissions
         self.defaults = defaults
