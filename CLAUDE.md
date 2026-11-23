@@ -22,7 +22,7 @@ Swift Package 하나로, Xcode 없이 Command Line Tools만으로 빌드한다. 
 ## 명령
 
 ```bash
-./scripts/test.sh                 # 번역 빠짐 확인 + 빌드 + 자체 점검(본체 + 모든 기능). 실제 설정·데이터는 안 건드림
+./scripts/test.sh                 # 번역 빠짐 확인 + 빌드 + 자체 점검(본체 + 모든 기능) + 타이머 단위 시험(swift test). 실제 설정·데이터는 안 건드림
 ./scripts/run.sh                  # Epp Dev 빌드 후 켜기
 ./scripts/run.sh keepy            # Keepy 하나만 단독으로 켜기(개발·시험용)
 ./scripts/build-app.sh            # build/Epp.app (릴리스)
@@ -124,6 +124,18 @@ Modules/<이름>/     기능 하나 (예: Modules/Keepy)
 - 잠금 키는 키체인 서비스 `com.eddieee.Floaty` 그대로(나중에 옛 스티커를 가져올 때 같은 키로 풀 수 있게).
 - 번역 사전은 `"한국어": "English"` 꼴이다(`scripts/test.sh`가 두 꼴을 다 읽는다).
 
+## Clocky (Modules/Clocky) = 타이머
+
+원본: ../Clocky 0.3.2 (커밋 e1732f4). 바뀐 점:
+- `AppDelegate` → `ClockyModule`. 샌드박스 옮기기·받아 둔 dmg 정리·Applications로 옮기라는 안내는 뺐다(Epp에는 해당 없음).
+- 메뉴바에 남은 시간은 **보여 줄 것이 있을 때만** 따로 띄운다(타이머가 돌거나 알람이 1시간 안). 없으면 그 항목을 지운다.
+- 저장은 `ClockyStorage.defaults`·`folder`(Epp가 준 값). 캘린더 캐시는 `<Epp>/Clocky/Calendars`, 내 소리는 `<Epp>/Clocky/Sounds`.
+- 캘린더: Info.plist 설명 문구와 `Resources/Epp.entitlements`(강화 런타임에서 캘린더 읽기)를 본체에 넣었다. 권한 줄은 Epp 일반 → 권한(`.calendar`).
+  Mac 캘린더를 켤 때 묻는 흐름(캘린더 탭)은 그대로 둔다.
+- 단위 시험은 `Tests/ClockyTests`(Swift Testing). `scripts/test.sh`가 Command Line Tools 경로를 알려 주고 `swift test`로 돌린다.
+  옛 GUI 시험(Tests/GUI, gui-test.sh)과 업데이트·샌드박스 시험은 가져오지 않았다.
+- 영어 사전은 `ClockySettings.swift` 안 `enum Localization`(`"한국어": "English"` 꼴). **같은 키가 두 번 들어가면 실행 중에 죽는다.**
+
 ## 화면 규칙 (모든 기능이 같게)
 
 - **기능 이름은 하는 일로**: 화면에는 앱 이름(Keepy, Peeky) 대신 기능 이름을 쓴다. `EppModuleInfo`의 `nameKo`/`nameEn`.
@@ -158,7 +170,8 @@ Modules/<이름>/     기능 하나 (예: Modules/Keepy)
 
 ## 남은 일
 
-- [ ] Clocky, Grabby 옮기기
+- [ ] Grabby 옮기기
+- [ ] 타이머: 남은 시간 메뉴바 항목, 캘린더 권한 묻기를 실제로 확인
 - [ ] 스티커: 앱 메뉴 합치기(⌘D·서식 등)와 알람 알림을 실제로 눌러 확인
 - [ ] Peeky를 실제로 켜서 확인(권한, 그룹 아이콘, 숨기기·정리, 끄고 켤 때 아이콘이 깨끗이 사라지는지)
 - [ ] 기존 단독 앱의 데이터 가져오기(처음 켤 때 물어보고 복사)

@@ -5,7 +5,7 @@ import PackageDescription
 // 1. Modules/<이름>/ 폴더를 만들고 EppModule 약속을 따르는 클래스를 넣는다.
 // 2. 아래 `modules`에 이름을 한 줄 더한다.
 // 3. Sources/Epp/ModuleList.swift의 목록에 한 줄 더한다.
-let modules = ["Keepy", "Peeky", "Floaty"]
+let modules = ["Keepy", "Peeky", "Floaty", "Clocky"]
 
 let package = Package(
     name: "Epp",
@@ -21,5 +21,8 @@ let package = Package(
         ),
     ] + modules.map {
         .target(name: $0, dependencies: ["EppKit"], path: "Modules/\($0)")
-    }
+    } + [
+        // 타이머의 단위 시험(옛 Clocky에서 가져옴). Xcode 없이 Command Line Tools의 Swift Testing으로 돈다: swift test
+        .testTarget(name: "ClockyTests", dependencies: ["Clocky"], path: "Tests/ClockyTests"),
+    ]
 )

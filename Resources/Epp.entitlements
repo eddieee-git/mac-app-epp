@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- 앱 샌드박스는 쓰지 않는다(업데이트를 앱 안에서 바꿔 넣으려고). 강화 런타임은 켠다.
+	     강화 런타임에서 타이머가 Mac 캘린더 앱의 일정을 읽으려면 이 권한이 있어야 한다. 처음 한 번 macOS가 허용을 묻는다. -->
+	<key>com.apple.security.personal-information.calendars</key>
+	<true/>
+</dict>
+</plist>

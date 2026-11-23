@@ -31,6 +31,10 @@
 	<string>1</string>
 	<key>LSMinimumSystemVersion</key>
 	<string>14.0</string>
+	<key>NSCalendarsFullAccessUsageDescription</key>
+	<string>Epp's Timer reads the titles and times of your Mac Calendar events to ring before they start. Events never leave this Mac. / Epp의 타이머는 Mac 캘린더 앱의 일정 시작 전에 알람을 울리려고 일정의 제목과 시각을 읽어요. 일정은 이 Mac 밖으로 보내지 않아요.</string>
+	<key>NSCalendarsUsageDescription</key>
+	<string>Epp's Timer reads the titles and times of your Mac Calendar events to ring before they start. Events never leave this Mac. / Epp의 타이머는 Mac 캘린더 앱의 일정 시작 전에 알람을 울리려고 일정의 제목과 시각을 읽어요. 일정은 이 Mac 밖으로 보내지 않아요.</string>
 	<key>LSUIElement</key>
 	<true/>
 	<key>NSPrincipalClass</key>

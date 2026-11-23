@@ -1,5 +1,6 @@
 import AppKit
 import ApplicationServices
+import EventKit
 import ScreenCaptureKit
 import UserNotifications
 
@@ -8,6 +9,7 @@ public enum EppPermission: String, CaseIterable, Identifiable, Sendable {
     case accessibility
     case screenRecording
     case notifications
+    case calendar
 
     public var id: String { rawValue }
 
@@ -16,6 +18,7 @@ public enum EppPermission: String, CaseIterable, Identifiable, Sendable {
         case .accessibility: return EppText.t("손쉬운 사용", "Accessibility")
         case .screenRecording: return EppText.t("화면 기록", "Screen Recording")
         case .notifications: return EppText.t("알림", "Notifications")
+        case .calendar: return EppText.t("캘린더", "Calendars")
         }
     }
 
@@ -25,6 +28,7 @@ public enum EppPermission: String, CaseIterable, Identifiable, Sendable {
         case .accessibility: return URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility")
         case .screenRecording: return URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture")
         case .notifications: return URL(string: "x-apple.systempreferences:com.apple.Notifications-Settings.extension")
+        case .calendar: return URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Calendars")
         }
     }
 }
@@ -67,6 +71,7 @@ public final class EppPermissions: ObservableObject {
         case .accessibility: return accessibility
         case .screenRecording: return screenRecording
         case .notifications: return notifications
+        case .calendar: return EKEventStore.authorizationStatus(for: .event) == .fullAccess
         }
     }
 
@@ -90,6 +95,15 @@ public final class EppPermissions: ObservableObject {
             let key = kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String
             _ = AXIsProcessTrustedWithOptions([key: true] as CFDictionary)
             openSettings(permission)
+        case .calendar:
+            // 아직 묻지 않았으면 시스템 확인 창을, 이미 거절했으면 시스템 설정의 캘린더 쪽을 연다.
+            if EKEventStore.authorizationStatus(for: .event) == .notDetermined {
+                EKEventStore().requestFullAccessToEvents { _, _ in
+                    DispatchQueue.main.async { MainActor.assumeIsolated { self.objectWillChange.send() } }
+                }
+            } else {
+                openSettings(.calendar)
+            }
         case .notifications:
             // 아직 묻지 않았으면 시스템 확인 창을, 이미 거절했으면 시스템 설정의 알림 쪽을 연다.
             guard EppNotifications.isAvailable else { return }

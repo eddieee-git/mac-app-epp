@@ -38,7 +38,8 @@ fi
 
 # 임시 서명을 하되, 서명 조건을 번들 ID로 지정해서 다시 빌드해도 같은 앱으로 인식되게 한다(손쉬운 사용 권한 유지).
 # 강화 런타임(--options runtime)을 켜서 다른 라이브러리를 끼워 넣지 못하게 한다.
-codesign --force --sign - --options runtime -r="designated => identifier \"$bundle_id\"" "$app"
+codesign --force --sign - --options runtime --entitlements Resources/Epp.entitlements \
+    -r="designated => identifier \"$bundle_id\"" "$app"
 
 if [[ $config == debug ]]; then
     echo "$app"
