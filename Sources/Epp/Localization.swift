@@ -45,7 +45,6 @@ enum Localization {
         ("Epp 설정", "Epp Settings"),
         ("일반", "General"),
         ("설정 검색", "Search Settings"),
-        ("검색어 지우기", "Clear search"),
         ("찾는 설정이 없어요", "No matching settings"),
         ("시작 안내", "Getting Started"),
         ("기능", "Features"),

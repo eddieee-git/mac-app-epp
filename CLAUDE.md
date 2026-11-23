@@ -110,6 +110,20 @@ Modules/<이름>/     기능 하나 (예: Modules/Keepy)
 - 진단 로그: 자기 로그 파일·설정을 없애고 `ItemStore.log` → `EppLog.write("메뉴바", …)`.
 - `Preferences.shared`가 `Preferences!`라서 `let prefs = Preferences.shared`처럼 쓰면 Optional이 된다. 타입을 적는다(`let prefs: Preferences = …`).
 
+## Floaty (Modules/Floaty) = 스티커
+
+원본: ../Floaty (커밋 62a4ae5). 바뀐 점:
+- `AppDelegate` → `FloatyModule`. 메뉴바 아이콘(압정 메모지)·⌥클릭 새 스티커·한 번만 실행(SingleInstance)은 뺐다. 메뉴는 Epp의 "스티커 ▸".
+- 앱 메뉴(파일 ⌘N·⌘D·⌘S·⌘P, 편집의 찾기·서식 없이 붙여넣기, 서식, 윈도우 ⌘\`)는 `mainMenus()`로 넘기고 본체가 합친다.
+- 테마는 `NSApp.appearance`가 아니라 스티커 창에만(`FloatyTheme`: StickyPanel, 스티커 관리 창, 되돌리기 알림). 앱 전체를 바꾸면 다른 기능 화면까지 바뀐다.
+- 언어는 Epp를 따른다(`Localization.language` = `EppLanguage`). 바로 바뀌던 언어 고르기는 뺐다.
+- `KeyCombo`·`HotKey`는 EppKit 것. `HotKey.swift`에는 `HotKeyAction`과 기본값(`KeyCombo.defaults`, `renameDefault`, `migrated`, `matches`)만.
+  단축키 편집기는 원래 것(전역 6개 + 스티커 안 제목 변경, 겹침 확인, 입력하는 동안 등록 풀기)을 그대로 쓴다.
+- 알람 알림은 `EppNotifications.post(moduleID: "floaty", identifier: <스티커 id>)`, 누르면 `handleNotification`.
+- 저장하지 못한 스티커가 있으면 `shouldQuit()`이 끄기 전에 묻는다.
+- 잠금 키는 키체인 서비스 `com.eddieee.Floaty` 그대로(나중에 옛 스티커를 가져올 때 같은 키로 풀 수 있게).
+- 번역 사전은 `"한국어": "English"` 꼴이다(`scripts/test.sh`가 두 꼴을 다 읽는다).
+
 ## 화면 규칙 (모든 기능이 같게)
 
 - **기능 이름은 하는 일로**: 화면에는 앱 이름(Keepy, Peeky) 대신 기능 이름을 쓴다. `EppModuleInfo`의 `nameKo`/`nameEn`.
@@ -136,10 +150,16 @@ Modules/<이름>/     기능 하나 (예: Modules/Keepy)
 - **시작하기**: `makeGettingStarted()`가 `EppStepList`(3단계 안팎 + 짧은 footer)를 돌려준다. 끝낸 단계는 체크로 바뀐다.
   처음 켤 때 본체가 그 기능 설정을 연다. 닫으면 숨고, 메뉴 "시작 안내"(본체가 붙임)나 `context.showGettingStarted()`로 다시 연다.
 - **메뉴**: `fillMenu`에는 주 동작(열기) → 고유 항목만. 본체가 끝에 "시작 안내", "<이름> 설정…"을 붙인다.
+- **앱 메뉴**(화면 맨 위 왼쪽): 기능은 `mainMenus()`로 `EppMainMenu(.file/.edit/.format/.window, 메뉴)`만 넘긴다.
+  본체가 Epp · 파일 · 편집 · 서식 · 윈도우 순서로 합치고, 같은 동작·같은 키는 한 번만 넣는다. `NSApp.mainMenu`를 직접 바꾸지 않는다.
+- **알림**: `EppNotifications.post`로 보내고 `handleNotification(identifier:)`로 받는다. 알림 센터 처리기는 본체 하나다.
+  알림을 쓰면 `permissionNeeds`에 `.notifications`를 넣는다.
+- **끝내기 전 확인**: 저장하지 못한 내용이 있으면 `shouldQuit()`에서 묻는다. `stop()`에서는 저장하고 창·타이머·관찰을 모두 거둔다.
 
 ## 남은 일
 
-- [ ] Clocky, Floaty, Grabby 옮기기
+- [ ] Clocky, Grabby 옮기기
+- [ ] 스티커: 앱 메뉴 합치기(⌘D·서식 등)와 알람 알림을 실제로 눌러 확인
 - [ ] Peeky를 실제로 켜서 확인(권한, 그룹 아이콘, 숨기기·정리, 끄고 켤 때 아이콘이 깨끗이 사라지는지)
 - [ ] 기존 단독 앱의 데이터 가져오기(처음 켤 때 물어보고 복사)
 - [ ] 첫 릴리스(v0.1.0): 저장소 공개, 릴리스 노트, `./scripts/release.sh`

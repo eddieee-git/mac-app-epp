@@ -15,6 +15,8 @@ final class ModuleManager: ObservableObject {
     private(set) var running: [String: any EppModule] = [:]
     /// 설정 창을 열어 해당 기능을 보여 준다(본체가 채운다).
     var openSettings: (String?) -> Void = { _ in }
+    /// 기능을 켜거나 끈 뒤(본체가 앱 메뉴를 다시 모은다).
+    var onChange: () -> Void = {}
     /// 본체의 메뉴바 아이콘(본체가 채운다).
     var hostStatusItems: () -> [NSStatusItem] = { [] }
 
@@ -55,6 +57,7 @@ final class ModuleManager: ObservableObject {
             running.removeValue(forKey: id)?.stop()
         }
         UserDefaults.standard.set(enabledIDs, forKey: Self.enabledKey)
+        onChange()
     }
 
     func stopAll() {

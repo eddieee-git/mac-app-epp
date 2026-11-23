@@ -1,5 +1,6 @@
 import AppKit
 import EppKit
+import UserNotifications
 
 /// Dock에 Epp 아이콘을 보일지 (기본 끔). 바꾸면 바로 적용한다.
 @MainActor
@@ -28,7 +29,7 @@ enum DockIcon {
 }
 
 @MainActor
-final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
+final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, UNUserNotificationCenterDelegate {
     let manager: ModuleManager
     private let settingsWindow: SettingsWindowController
     private var statusItem: NSStatusItem!
@@ -39,6 +40,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         super.init()
         manager.openSettings = { [weak self] id in self?.showSettings(page: id) }
         manager.hostStatusItems = { [weak self] in [self?.statusItem].compactMap { $0 } }
+        // 기능을 켜고 끌 때마다 기능이 더한 앱 메뉴(파일·서식 등)를 다시 모은다.
+        manager.onChange = { [weak self] in self?.rebuildMainMenu() }
     }
 
     private var hasLaunchedBefore: Bool {
@@ -50,7 +53,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         EppLog.path = NSHomeDirectory() + "/Library/Logs/\(ModuleManager.folderName).log"
         EppLog.clear()
         EppLog.write("Epp", "launch \(Bundle.main.bundlePath) version=\(Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") ?? "-") features=\(manager.enabledIDs)")
-        NSApp.mainMenu = makeMainMenu()
+        // 알림은 앱마다 처리기가 하나라 본체가 받아 보낸 기능에게 넘긴다.
+        if EppNotifications.isAvailable { UNUserNotificationCenter.current().delegate = self }
 
         // 새 아이콘은 macOS가 왼쪽 끝(노치 쪽)에 놓아 가려질 수 있다. 처음 한 번만 오른쪽 가까이에 둔다.
         // 값은 오른쪽 끝에서 잰 거리. 사용자가 옮긴 뒤에는 macOS가 바꾼 값을 그대로 둔다.
@@ -71,6 +75,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         statusItem.button?.toolTip = solo.map { "\($0.name) (Epp)" } ?? "Epp"
 
         manager.startEnabled()
+        rebuildMainMenu()
         if AppUpdater.shouldRun { AppUpdater.shared.start() }
 
         #if DEBUG
@@ -90,6 +95,36 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
         if !flag { showSettings(page: nil) }
         return true
+    }
+
+    /// 저장하지 못한 내용이 있는 기능은 끄기 전에 묻는다.
+    func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
+        for type in manager.enabledTypes {
+            if let module = manager.module(id: type.info.id), !module.shouldQuit() { return .terminateCancel }
+        }
+        return .terminateNow
+    }
+
+    // MARK: 알림
+
+    /// 알림을 누르면 보낸 기능에게 넘긴다.
+    nonisolated func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse,
+                                            withCompletionHandler completionHandler: @escaping () -> Void) {
+        let identifier = response.notification.request.identifier
+        let moduleID = response.notification.request.content.userInfo[EppNotifications.moduleKey] as? String
+        DispatchQueue.main.async {
+            MainActor.assumeIsolated {
+                guard let moduleID, let module = self.manager.module(id: moduleID) else { return }
+                module.handleNotification(identifier: identifier)
+            }
+        }
+        completionHandler()
+    }
+
+    /// Epp가 앞에 있어도 배너를 띄우고 알림 목록에 남긴다.
+    nonisolated func userNotificationCenter(_ center: UNUserNotificationCenter, willPresent notification: UNNotification,
+                                            withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void) {
+        completionHandler([.banner, .list])
     }
 
     func applicationWillTerminate(_ notification: Notification) {
@@ -188,7 +223,51 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         showSettings(page: sender.representedObject as? String)
     }
 
-    // MARK: 앱 메뉴 (설정 창에서 ⌘W, 복사·붙이기가 되도록)
+    // MARK: 앱 메뉴 (설정 창에서 ⌘W, 복사·붙이기가 되도록 + 기능이 더한 메뉴)
+
+    /// 본체 메뉴(Epp · 편집 · 윈도우)에 켠 기능의 메뉴를 자리별로 합친다: Epp · 파일 · 편집 · 서식 · 윈도우.
+    /// 같은 자리에 있으면 그 아래에 이어 붙이고, 같은 동작·같은 키의 항목은 한 번만 넣는다.
+    func rebuildMainMenu() {
+        let base = makeMainMenu()
+        var slots: [EppMainMenu.Slot: NSMenu] = [
+            .edit: base.items[1].submenu!,
+            .window: base.items[2].submenu!,
+        ]
+        for type in manager.enabledTypes {
+            guard let module = manager.module(id: type.info.id) else { continue }
+            for extra in module.mainMenus() {
+                guard let target = slots[extra.slot] else {
+                    slots[extra.slot] = extra.menu
+                    continue
+                }
+                var added = false
+                for item in extra.menu.items {
+                    if item.isSeparatorItem { continue }
+                    let duplicate = target.items.contains {
+                        $0.action == item.action && $0.keyEquivalent == item.keyEquivalent
+                            && $0.keyEquivalentModifierMask == item.keyEquivalentModifierMask && $0.tag == item.tag
+                    }
+                    if duplicate { continue }
+                    if !added { target.addItem(.separator()); added = true }
+                    extra.menu.removeItem(item)
+                    target.addItem(item)
+                }
+            }
+        }
+        let main = NSMenu()
+        if let app = base.items.first {
+            base.removeItem(app)
+            main.addItem(app)
+        }
+        for slot in EppMainMenu.Slot.allCases {
+            guard let menu = slots[slot] else { continue }
+            let item = NSMenuItem(title: menu.title, action: nil, keyEquivalent: "")
+            menu.supermenu?.setSubmenu(nil, for: menu.supermenu!.items.first { $0.submenu === menu }!)
+            item.submenu = menu
+            main.addItem(item)
+        }
+        NSApp.mainMenu = main
+    }
 
     private func makeMainMenu() -> NSMenu {
         let main = NSMenu()

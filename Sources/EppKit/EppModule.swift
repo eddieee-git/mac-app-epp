@@ -58,6 +58,15 @@ public protocol EppModule: AnyObject {
     /// `epp://<id>/<명령>` 주소로 열렸을 때. 예: epp://keepy/show
     func handle(url: URL)
 
+    /// 앱 메뉴(메뉴 막대 왼쪽 파일·편집·서식·윈도우)에 더할 메뉴. 기능을 켜고 끌 때마다 본체가 다시 모은다.
+    func mainMenus() -> [EppMainMenu]
+
+    /// 이 기능이 보낸 알림(`EppNotifications.post`)을 사용자가 눌렀을 때.
+    func handleNotification(identifier: String)
+
+    /// Epp를 끝내도 되는지. 저장하지 못한 내용이 있으면 물어보고 false를 돌려줄 수 있다.
+    func shouldQuit() -> Bool
+
     /// 지금 등록한 전역 단축키(어디서나 동작하는 키). Epp 일반 → 단축키에 모아 보여 주고 겹치면 알린다.
     func globalShortcuts() -> [EppShortcutInfo]
 
@@ -73,6 +82,9 @@ public extension EppModule {
     func makeGettingStarted() -> AnyView? { nil }
     static var permissionNeeds: [EppPermissionNeed] { [] }
     func globalShortcuts() -> [EppShortcutInfo] { [] }
+    func mainMenus() -> [EppMainMenu] { [] }
+    func handleNotification(identifier: String) {}
+    func shouldQuit() -> Bool { true }
 }
 
 /// 본체가 기능에 넘겨주는 것: 그 기능만 쓰는 설정 저장소와 데이터 폴더, 본체 동작.

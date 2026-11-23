@@ -13,6 +13,8 @@ for src in [pathlib.Path("Sources/Epp"), *sorted(pathlib.Path("Modules").iterdir
         continue
     loc = (src / "Localization.swift").read_text()
     known = set(re.findall(r'^\s*\("((?:[^"\\]|\\.)*)",', loc, re.M))
+    # 사전이 ("한국어", "English") 목록이 아니라 "한국어": "English" 꼴인 기능(스티커)도 읽는다.
+    known |= set(re.findall(r'^\s*"((?:[^"\\]|\\.)*)"\s*:\s*"', loc, re.M))
     used = set()
     for f in src.glob("*.swift"):
         if f.name == "Localization.swift":

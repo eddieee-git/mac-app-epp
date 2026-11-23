@@ -1,0 +1,472 @@
+import AppKit
+import EppKit
+import SwiftUI
+import UniformTypeIdentifiers
+
+/// Epp 설정 창에서 스티커를 골랐을 때의 탭: 일반 · 스티커 · 날짜 · 색상 · 소리 · 단축키.
+/// 틀(머리·시작하기·탭·검색)은 Epp 본체가 그린다. 언어, 로그인 시 실행, 업데이트, 정보는 Epp 일반 쪽에 있다.
+enum FloatySettings {
+    @MainActor
+    static func tabs(settings: AppSettings) -> [EppSettingsTab] {
+        [
+            EppSettingsTab("general", L("일반"), keywords: [L("테마"), L("삭제하기 전에 확인"), L("휴지통")]) {
+                FloatySettingsView(settings: settings, tab: .general)
+            },
+            EppSettingsTab("stickies", L("스티커"), keywords: [
+                L("새 스티커"), L("너비"), L("높이"), L("글씨체"), L("글자 크기"), L("항상 위"), L("색상"),
+                L("모든 스티커"), L("투명도"), L("아래 줄 기본 표시"),
+            ]) { FloatySettingsView(settings: settings, tab: .stickies) },
+            EppSettingsTab("dates", L("날짜"), keywords: [L("연도"), L("요일"), L("시각"), L("오늘 날짜는 시각만 표시")]) {
+                FloatySettingsView(settings: settings, tab: .dates)
+            },
+            EppSettingsTab("colors", L("색상"), keywords: [L("색상")]) {
+                FloatySettingsView(settings: settings, tab: .colors)
+            },
+            EppSettingsTab("sounds", L("소리"), keywords: [L("효과음 켜기 (알람 소리는 항상 나요)"), L("알람을 알림 센터에도 보내기")]) {
+                FloatySettingsView(settings: settings, tab: .sounds)
+            },
+            EppSettingsTab("shortcuts", L("단축키"), keywords: [L("전역 단축키"), L("스티커 안 단축키"), L("제목 변경")]) {
+                FloatySettingsView(settings: settings, tab: .shortcuts)
+            },
+        ]
+    }
+}
+
+struct FloatySettingsView: View {
+    enum Tab { case general, stickies, dates, colors, sounds, shortcuts }
+
+    @ObservedObject var settings: AppSettings
+    let tab: Tab
+
+    var body: some View {
+        switch tab {
+        case .stickies: stickies
+        case .general: general
+        case .dates: dates
+        case .colors: colors
+        case .sounds: sounds
+        case .shortcuts: shortcuts
+        }
+    }
+
+    private var dates: some View {
+        Form {
+            Section {
+                Picker(L("날짜"), selection: $settings.dateStyle) {
+                    ForEach(DateStyle.allCases, id: \.self) { Text($0.text(Date(), year: settings.yearStyle)).tag($0) }
+                }
+                Picker(L("연도"), selection: $settings.yearStyle) {
+                    ForEach(YearStyle.allCases, id: \.self) { Text($0.title).tag($0) }
+                }
+                .pickerStyle(.segmented)
+                Picker(L("요일"), selection: $settings.weekdayStyle) {
+                    ForEach(WeekdayStyle.allCases, id: \.self) { Text($0.title).tag($0) }
+                }
+                Picker(L("시각"), selection: $settings.timeStyle) {
+                    ForEach(TimeStyle.allCases, id: \.self) { Text($0.title).tag($0) }
+                }
+                .pickerStyle(.segmented)
+                Toggle(L("오늘 날짜는 시각만 표시"), isOn: $settings.timeOnlyToday)
+                LabeledContent(L("미리 보기"), value: settings.dateText(Date(), compact: false))
+            }
+        }
+        .formStyle(.grouped)
+    }
+
+    private var sounds: some View {
+        Form {
+            Section {
+                Toggle(L("효과음 켜기 (알람 소리는 항상 나요)"), isOn: $settings.soundEffects)
+                Toggle(L("알람을 알림 센터에도 보내기"), isOn: $settings.alarmNotifications)
+                    .help(L("화면을 보고 있지 않았어도 알림 목록에서 확인할 수 있어요. 처음 한 번 알림 권한을 물어요."))
+                SoundEditor(settings: settings)
+            }
+        }
+        .formStyle(.grouped)
+    }
+
+    private var shortcuts: some View {
+        Form {
+            HotKeyEditor(settings: settings)
+        }
+        .formStyle(.grouped)
+    }
+
+    private var colors: some View {
+        Form {
+            Section {
+                ColorEditor(settings: settings)
+            }
+        }
+        .formStyle(.grouped)
+    }
+
+    /// 새로 만들 스티커의 기본값과, 이미 있는 스티커에도 걸리는 값.
+    private var stickies: some View {
+        Form {
+            Section(L("새 스티커")) {
+                // 다른 항목처럼 값을 오른쪽에 둔다.
+                LabeledContent(L("너비")) {
+                    SizeStepper(value: $settings.newNoteWidth, range: AppSettings.widthRange)
+                }
+                LabeledContent(L("높이")) {
+                    SizeStepper(value: $settings.newNoteHeight, range: AppSettings.heightRange)
+                }
+                Picker(L("글씨체"), selection: $settings.newNoteFontFamily) {
+                    Text(L("시스템 글꼴")).tag(String?.none)
+                    ForEach(FormattingTextView.fontFamilies, id: \.self) { Text($0).tag(String?.some($0)) }
+                }
+                Picker(L("글자 크기"), selection: $settings.newNoteFontSize) {
+                    ForEach(FormattingTextView.fontSizes, id: \.self) { Text("\(Int($0))").tag(Double($0)) }
+                }
+                Toggle(L("항상 위"), isOn: $settings.newNotePinned)
+                Picker(L("색상"), selection: $settings.colorMode) {
+                    Text(L("랜덤 (직전 스티커 색 제외)")).tag(AppSettings.ColorMode.random)
+                    Text(L("고정")).tag(AppSettings.ColorMode.fixed)
+                }
+                .pickerStyle(.radioGroup)
+                if settings.colorMode == .fixed {
+                    LabeledContent(L("고정 색")) {
+                        ColorSwatches(selection: $settings.fixedColorIndex)
+                    }
+                }
+            }
+            Section(L("모든 스티커")) {
+                LabeledContent(L("투명도")) {
+                    HStack {
+                        Slider(value: $settings.opacity, in: AppSettings.opacityRange)
+                        Text("\(Int((settings.opacity * 100).rounded()))%")
+                            .monospacedDigit()
+                            .frame(width: 40, alignment: .trailing)
+                    }
+                }
+                Toggle(L("투명도는 새 스티커에만 적용"), isOn: $settings.opacityNewNotesOnly)
+                Picker(L("아래 줄 기본 표시"), selection: $settings.footerInfo) {
+                    ForEach(FooterInfo.allCases, id: \.self) { Text($0.title).tag($0) }
+                }
+                .pickerStyle(.segmented)
+            }
+        }
+        .formStyle(.grouped)
+    }
+
+    /// 스티커 전체에 걸리는 설정. (언어·로그인 시 실행·업데이트는 Epp 일반 쪽에 있다)
+    private var general: some View {
+        Form {
+            Section {
+                Picker(L("테마"), selection: $settings.theme) {
+                    ForEach(AppSettings.Theme.allCases, id: \.self) { Text($0.title).tag($0) }
+                }
+                .pickerStyle(.segmented)
+            } footer: {
+                Text(L("스티커와 스티커 관리 창에만 적용돼요."))
+                    .font(.caption).foregroundStyle(.secondary)
+            }
+            Section(L("휴지통")) {
+                Toggle(L("삭제하기 전에 확인"), isOn: $settings.confirmTrash)
+                Toggle(L("휴지통에서 %d일 지난 스티커 자동으로 지우기", NoteStore.trashRetentionDays), isOn: $settings.autoEmptyTrash)
+            }
+        }
+        .formStyle(.grouped)
+    }
+}
+
+/// 동작마다 시스템 사운드나 내 파일을 고른다. 고르면 바로 들려준다.
+private struct SoundEditor: View {
+    private static let chooseFile = "choose"
+
+    @ObservedObject var settings: AppSettings
+
+    var body: some View {
+        ForEach(SoundEffect.allCases, id: \.self) { effect in
+            LabeledContent(effect.title) {
+                HStack(spacing: 8) {
+                    Picker(effect.title, selection: selection(for: effect)) {
+                        Text(L("없음")).tag(SoundEffect.silent)
+                        Divider()
+                        ForEach(SoundEffect.systemSounds, id: \.self) { Text($0).tag($0) }
+                        Divider()
+                        if effect.choice.hasPrefix("/") {
+                            Text((effect.choice as NSString).lastPathComponent).tag(effect.choice)
+                        }
+                        Text(L("파일 선택…")).tag(Self.chooseFile)
+                    }
+                    .labelsHidden()
+                    .frame(width: 170, alignment: .trailing)
+                    Button {
+                        effect.preview()
+                    } label: {
+                        Image(systemName: "speaker.wave.2")
+                    }
+                    .buttonStyle(.borderless)
+                    .disabled(effect.choice == SoundEffect.silent)
+                    .help(L("들어 보기"))
+                }
+            }
+        }
+        HStack {
+            Spacer()
+            Button(L("기본값으로")) { settings.sounds = [:] }
+                .disabled(settings.sounds.isEmpty)
+        }
+    }
+
+    private func selection(for effect: SoundEffect) -> Binding<String> {
+        Binding(
+            get: { effect.choice },
+            set: { value in
+                if value == Self.chooseFile {
+                    // 메뉴가 닫힌 다음에 파일 창을 연다.
+                    DispatchQueue.main.async { chooseFile(for: effect) }
+                } else {
+                    settings.sounds[effect.rawValue] = value
+                    effect.preview()
+                }
+            }
+        )
+    }
+
+    private func chooseFile(for effect: SoundEffect) {
+        let panel = NSOpenPanel()
+        panel.allowedContentTypes = [.audio]
+        panel.message = L("%@ 소리로 쓸 파일을 고르세요.", effect.title)
+        guard panel.runModal() == .OK, let url = panel.url else { return }
+        guard NSSound(contentsOf: url, byReference: true) != nil else {
+            let alert = NSAlert()
+            alert.messageText = L("소리 파일을 읽지 못했어요")
+            alert.informativeText = url.lastPathComponent
+            alert.runModal()
+            return
+        }
+        settings.sounds[effect.rawValue] = url.path
+        effect.preview()
+    }
+}
+
+/// 단축키를 고치는 칸. 전역 단축키와 스티커 안에서만 쓰는 제목 변경 키가 있다.
+private enum ShortcutSlot: Hashable {
+    case global(HotKeyAction)
+    case rename
+
+    var title: String {
+        switch self {
+        case .global(let action): return action.title
+        case .rename: return L("제목 변경")
+        }
+    }
+}
+
+/// 단축키를 입력받는다. 버튼을 누른 다음 원하는 조합을 누르면 저장한다.
+private struct HotKeyEditor: View {
+    @ObservedObject var settings: AppSettings
+    @State private var recording: ShortcutSlot?
+    @State private var monitor: Any?
+    @State private var message: String?
+
+    var body: some View {
+        Section {
+            ForEach(HotKeyAction.allCases, id: \.self) { action in
+                row(.global(action), failed: settings.failedHotKeys.contains(action))
+            }
+        } header: {
+            Text(L("전역 단축키"))
+        } footer: {
+            Text(EppShortcutText.footer).font(.caption).foregroundStyle(.secondary)
+        }
+        Section {
+            row(.rename, failed: false)
+        } header: {
+            Text(L("스티커 안 단축키"))
+        } footer: {
+            Text(L("앞에 있는 스티커에서만 동작해요. 맥북에서 F2를 쓰려면 fn 키와 함께 누르세요."))
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+        Section {
+            HStack {
+                Text(message ?? L("Esc를 누르면 입력을 취소해요."))
+                    .font(.caption)
+                    .foregroundStyle(message == nil ? Color.secondary : Color.red)
+                Spacer()
+                Button(L("기본값으로")) {
+                    stop()
+                    settings.hotKeys = KeyCombo.defaults
+                    settings.renameTitleKey = KeyCombo.renameDefault
+                }
+            }
+        }
+        .onDisappear(perform: stop)
+        .onReceive(NotificationCenter.default.publisher(for: NSWindow.didResignKeyNotification)) { _ in stop() }
+    }
+
+    private func row(_ slot: ShortcutSlot, failed: Bool) -> some View {
+        LabeledContent(slot.title) {
+            HStack(spacing: 8) {
+                if failed {
+                    Text(L("등록하지 못함")).font(.caption).foregroundStyle(.red)
+                }
+                Button(recording == slot ? L("키를 누르세요") : combo(for: slot)?.displayText ?? L("없음")) {
+                    recording == slot ? stop() : start(slot)
+                }
+                .frame(minWidth: 110)
+                Button {
+                    setCombo(nil, for: slot)
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                }
+                .buttonStyle(.borderless)
+                .disabled(combo(for: slot) == nil)
+                .help(L("단축키 지우기"))
+            }
+        }
+    }
+
+    private func combo(for slot: ShortcutSlot) -> KeyCombo? {
+        switch slot {
+        case .global(let action): return settings.hotKeys[action.rawValue]
+        case .rename: return settings.renameTitleKey
+        }
+    }
+
+    private func setCombo(_ combo: KeyCombo?, for slot: ShortcutSlot) {
+        switch slot {
+        case .global(let action): settings.hotKeys[action.rawValue] = combo
+        case .rename: settings.renameTitleKey = combo
+        }
+    }
+
+    private func start(_ slot: ShortcutSlot) {
+        stop()
+        recording = slot
+        settings.isRecordingHotKey = true
+        monitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
+            handle(event, for: slot)
+            return nil
+        }
+    }
+
+    private func stop() {
+        if let monitor { NSEvent.removeMonitor(monitor) }
+        monitor = nil
+        recording = nil
+        message = nil
+        if settings.isRecordingHotKey { settings.isRecordingHotKey = false }
+    }
+
+    private func handle(_ event: NSEvent, for slot: ShortcutSlot) {
+        if event.keyCode == 53 { // Esc
+            stop()
+            return
+        }
+        guard let combo = KeyCombo(event: event) else {
+            message = L("⌘, ⌃, ⌥ 중 하나와 함께 누르세요.")
+            return
+        }
+        // 전역 단축키가 먼저 가로채므로 스티커 안 단축키와도 겹치면 안 된다.
+        let others: [ShortcutSlot] = HotKeyAction.allCases.map { .global($0) } + [.rename]
+        if let other = others.first(where: { $0 != slot && self.combo(for: $0) == combo }) {
+            message = L("%@에서 쓰는 단축키예요.", other.title)
+            return
+        }
+        setCombo(combo, for: slot)
+        stop()
+    }
+}
+
+/// 칸마다 제목과 바탕 색을 고른다. 라이트와 다크는 글자색이 달라서 지금 테마의 색만 바꾼다.
+private struct ColorEditor: View {
+    @ObservedObject var settings: AppSettings
+    @Environment(\.colorScheme) private var colorScheme
+
+    private var isDark: Bool { colorScheme == .dark }
+
+    private var themeKeys: [String] {
+        settings.customColors.keys.filter { $0.hasPrefix(isDark ? "dark." : "light.") }
+    }
+
+    /// 세로로 길어지지 않게 두 열로 놓는다.
+    private var rows: Int { (Palette.colors.count + 1) / 2 }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text(L("%@ 테마의 색을 바꿔요.", isDark ? L("다크") : L("라이트")))
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            Grid(alignment: .leading, horizontalSpacing: 8, verticalSpacing: 8) {
+                GridRow {
+                    captions
+                    captions
+                }
+                ForEach(0..<rows, id: \.self) { row in
+                    GridRow {
+                        slot(row)
+                        slot(row + rows)
+                    }
+                }
+            }
+            Button(L("이 테마의 색을 기본값으로")) {
+                themeKeys.forEach { settings.customColors[$0] = nil }
+            }
+            .disabled(themeKeys.isEmpty)
+        }
+    }
+
+    @ViewBuilder
+    private var captions: some View {
+        Color.clear.gridCellUnsizedAxes([.horizontal, .vertical])
+        Text(L("제목")).font(.caption).frame(width: 52)
+        Text(L("바탕")).font(.caption).frame(width: 52)
+    }
+
+    @ViewBuilder
+    private func slot(_ index: Int) -> some View {
+        Text(L(Palette.colors[index].name))
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.leading, index < rows ? 0 : 12)
+        picker(index, .header, L("제목"))
+        picker(index, .body, L("바탕"))
+    }
+
+    private func picker(_ index: Int, _ part: Palette.Part, _ label: String) -> some View {
+        ColorPicker(label, selection: Binding(
+            get: { Color(nsColor: Palette.resolved(index, part, isDark: isDark)) },
+            set: { settings.customColors[Palette.overrideKey(index, part, isDark: isDark)] = Palette.hex(of: NSColor($0)) }
+        ), supportsOpacity: false)
+        .labelsHidden()
+        .frame(width: 52)
+    }
+}
+
+/// 팔레트 색을 동그라미로 늘어놓고 하나를 고른다.
+private struct ColorSwatches: View {
+    @Binding var selection: Int
+
+    var body: some View {
+        HStack(spacing: 6) {
+            ForEach(Palette.colors.indices, id: \.self) { i in
+                Circle()
+                    .fill(Color(nsColor: Palette.color(i)))
+                    .frame(width: 18, height: 18)
+                    .overlay(Circle().strokeBorder(.black.opacity(0.15)))
+                    .overlay(Circle().strokeBorder(Color.accentColor, lineWidth: 2).padding(-3).opacity(selection == i ? 1 : 0))
+                    .contentShape(Circle())
+                    .onTapGesture { selection = i }
+                    .help(L(Palette.colors[i].name))
+            }
+        }
+        .padding(3)
+    }
+}
+
+/// 오른쪽 정렬된 숫자와 위아래 버튼. 20씩 바꾼다.
+private struct SizeStepper: View {
+    @Binding var value: Double
+    let range: ClosedRange<Double>
+
+    var body: some View {
+        HStack(spacing: 4) {
+            Text("\(Int(value))").monospacedDigit().foregroundStyle(.primary)
+            Stepper("", value: $value, in: range, step: 20).labelsHidden()
+        }
+    }
+}
