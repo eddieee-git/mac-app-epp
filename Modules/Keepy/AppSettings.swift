@@ -1,0 +1,93 @@
+import Carbon
+import EppKit
+import Foundation
+
+extension KeyCombo {
+    /// 기록 열기 기본값 ⌃⌥V. 공통 규칙의 기본 보조 키(⌃⌥)이고, ⇧⌘V(서식 없이 붙여 넣기)처럼 다른 앱이 흔히 쓰는 키와 겹치지 않는다.
+    static let openHistoryDefault = KeyCombo(keyCode: UInt32(kVK_ANSI_V), modifiers: UInt32(controlKey | optionKey), key: "V")
+}
+
+enum PanelPosition: String, CaseIterable, Identifiable {
+    case mouse, center
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .mouse: return L("마우스 포인터 위치")
+        case .center: return L("화면 가운데")
+        }
+    }
+}
+
+/// UserDefaults에 저장하는 설정. 바꾸면 바로 저장한다.
+@MainActor
+final class AppSettings: ObservableObject {
+    /// KeepyModule이 시작할 때 Epp가 준 저장소로 만든 설정을 넣는다.
+    static var shared: AppSettings!
+
+    static let historyLimits = [50, 100, 200, 500, 1000]
+    static let defaultHistoryLimit = 200
+
+    /// 비밀번호 관리자 등 기록하지 않을 앱 (번들 ID, 줄바꿈 구분)
+    static let defaultIgnoredApps = [
+        "com.apple.keychainaccess",
+        "com.apple.Passwords",
+        "com.1password.1password",
+        "com.agilebits.onepassword7",
+        "com.bitwarden.desktop",
+    ].joined(separator: "\n")
+
+    private let defaults: UserDefaults
+
+    @Published var historyLimit: Int { didSet { defaults.set(historyLimit, forKey: "historyLimit") } }
+    @Published var pasteAutomatically: Bool { didSet { defaults.set(pasteAutomatically, forKey: "pasteAutomatically") } }
+    @Published var panelPosition: PanelPosition { didSet { defaults.set(panelPosition.rawValue, forKey: "panelPosition") } }
+    @Published var ignoredApps: String { didSet { defaults.set(ignoredApps, forKey: "ignoredApps") } }
+    @Published var isPaused: Bool { didSet { defaults.set(isPaused, forKey: "isPaused") } }
+    /// 기록 열기 전역 단축키. nil이면 끔.
+    @Published var hotKey: KeyCombo? { didSet { saveHotKey() } }
+    /// 시작할 때 권한이 없으면 시작 안내를 다시 보여 줄지 ("다음부터 열지 않기"를 켜면 false)
+    @Published var showWelcome: Bool { didSet { defaults.set(showWelcome, forKey: "showWelcome") } }
+    /// 처음 실행했는지. 처음에는 권한과 상관없이 시작 안내를 보여 준다.
+    var hasLaunchedBefore: Bool {
+        get { defaults.bool(forKey: "hasLaunchedBefore") }
+        set { defaults.set(newValue, forKey: "hasLaunchedBefore") }
+    }
+
+    /// 단축키를 시스템에 등록하지 못했는지 (저장하지 않음)
+    @Published var hotKeyFailed = false
+
+    init(defaults: UserDefaults = .standard) {
+        self.defaults = defaults
+        let limit = defaults.integer(forKey: "historyLimit")
+        historyLimit = limit > 0 ? limit : Self.defaultHistoryLimit
+        pasteAutomatically = defaults.object(forKey: "pasteAutomatically") as? Bool ?? true
+        panelPosition = defaults.string(forKey: "panelPosition").flatMap(PanelPosition.init) ?? .mouse
+        ignoredApps = defaults.string(forKey: "ignoredApps") ?? Self.defaultIgnoredApps
+        isPaused = defaults.bool(forKey: "isPaused")
+        showWelcome = defaults.object(forKey: "showWelcome") as? Bool ?? true
+        if let data = defaults.data(forKey: "hotKey") {
+            // 빈 값은 사용자가 단축키를 끈 것
+            hotKey = data.isEmpty ? nil : (try? JSONDecoder().decode(KeyCombo.self, from: data)) ?? .openHistoryDefault
+        } else {
+            hotKey = .openHistoryDefault
+        }
+    }
+
+    var ignoredBundleIDs: Set<String> { Self.parseBundleIDs(ignoredApps) }
+
+    static func parseBundleIDs(_ text: String) -> Set<String> {
+        Set(text.split(whereSeparator: \.isNewline)
+            .map { $0.trimmingCharacters(in: .whitespaces) }
+            .filter { !$0.isEmpty })
+    }
+
+    private func saveHotKey() {
+        if let hotKey, let data = try? JSONEncoder().encode(hotKey) {
+            defaults.set(data, forKey: "hotKey")
+        } else {
+            defaults.set(Data(), forKey: "hotKey")
+        }
+    }
+}

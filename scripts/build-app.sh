@@ -1,0 +1,43 @@
+#!/bin/zsh
+# build/Epp.app을 만든다. Xcode 없이 Command Line Tools만으로 빌드한다. Apple 실리콘 Mac 전용이다.
+#
+#   ./scripts/build-app.sh             릴리스 빌드 → build/Epp.app (번들 ID com.eddieee.Epp)
+#   EPP_DEBUG=1 ./scripts/build-app.sh 디버그 빌드 → build/Epp Dev.app (번들 ID com.eddieee.Epp.dev)
+#
+# 디버그 빌드는 이름과 번들 ID가 달라서 설정(UserDefaults)과 데이터(~/Library/Application Support/Epp Dev)가
+# 실제 Epp와 섞이지 않는다. 기존 단독 앱(Keepy 등)과도 섞이지 않는다.
+# 아직 배포용 dmg와 업데이트 서명은 만들지 않는다(README의 "남은 일" 참고).
+set -e
+cd "$(dirname "$0")/.."
+
+config=release
+name=Epp
+bundle_id=com.eddieee.Epp
+if [[ -n "$EPP_DEBUG" ]]; then
+    config=debug
+    name="Epp Dev"
+    bundle_id=com.eddieee.Epp.dev
+fi
+swift build -c $config --arch arm64
+
+app="build/$name.app"
+rm -rf "$app"
+mkdir -p "$app/Contents/MacOS" "$app/Contents/Resources"
+cp .build/arm64-apple-macosx/$config/Epp "$app/Contents/MacOS/Epp"
+cp Resources/Info.plist "$app/Contents/Info.plist"
+[[ -f Resources/AppIcon.icns ]] && cp Resources/AppIcon.icns "$app/Contents/Resources/AppIcon.icns"
+
+plist="$app/Contents/Info.plist"
+/usr/libexec/PlistBuddy -c "Set :CFBundleIdentifier $bundle_id" "$plist"
+/usr/libexec/PlistBuddy -c "Set :CFBundleName $name" "$plist"
+/usr/libexec/PlistBuddy -c "Set :CFBundleDisplayName $name" "$plist"
+if [[ $config == debug ]]; then
+    # 디버그 빌드가 epp:// 주소를 가로채지 않게 한다.
+    /usr/libexec/PlistBuddy -c "Delete :CFBundleURLTypes" "$plist"
+fi
+
+# 임시 서명을 하되, 서명 조건을 번들 ID로 지정해서 다시 빌드해도 같은 앱으로 인식되게 한다(손쉬운 사용 권한 유지).
+# 강화 런타임(--options runtime)을 켜서 다른 라이브러리를 끼워 넣지 못하게 한다.
+codesign --force --sign - --options runtime -r="designated => identifier \"$bundle_id\"" "$app"
+
+echo "$app"

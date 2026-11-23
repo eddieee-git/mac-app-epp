@@ -1,0 +1,51 @@
+<p align="center"><img src="docs/images/icon.png" width="96" alt="Epp icon"></p>
+
+<h1 align="center">Epp</h1>
+
+<p align="center">Mac을 편하게 쓰는 작은 기능 모음 (Eddie's app)<br>메뉴바 아이콘 하나에서 필요한 기능만 켜서 써요.</p>
+
+> 아직 만드는 중이에요. 배포하지 않았고, 기존 단독 앱(Clocky, Floaty, Grabby, Keepy, Peeky)은 그대로 쓰면 돼요.
+
+## 들어 있는 기능
+
+| 기능 | 하는 일 | 상태 |
+|---|---|---|
+| **Keepy** | 복사한 내용을 모아 두고 다시 붙여 넣는 클립보드 기록 | 옮김 |
+| Peeky | 노치에 가려진 메뉴바 아이콘 꺼내 보기 | 옮길 예정 |
+| Clocky | 넘김시계 타이머·알람·일정 알림 | 옮길 예정 |
+| Floaty | 플로팅 스티커 메모 | 옮길 예정 |
+| Grabby | 찍고, 그리고, 바로 붙여 넣는 화면 캡처 | 옮길 예정 |
+
+## 쓰는 방법
+
+- 메뉴바의 Epp 아이콘(네모 네 개)을 누르면 켠 기능이 하나씩 메뉴로 나와요.
+- 평소에는 Dock에 보이지 않아요. 설정에서 **Dock에 아이콘 보이기**를 켜면 일반 앱처럼 Dock에도 나와요.
+- 처음에는 모든 기능이 꺼져 있어요. **설정 → 일반 → 기능**에서 쓸 기능만 켜요.
+- 끈 기능은 아무 일도 하지 않아요. 단축키도 등록하지 않고, 클립보드도 보지 않아요.
+- 다른 도구(단축어 등)에서 `epp://keepy/show`로 Keepy 기록 창을 열 수 있어요.
+
+## 설정
+
+| 항목 | 설명 |
+|---|---|
+| 기능 | 기능마다 켜기/끄기 (기본 모두 끔) |
+| 로그인 시 실행 | Mac에 로그인하면 Epp를 켜요 (기본 끔) |
+| Dock에 아이콘 보이기 | Dock과 메뉴 막대 왼쪽에 Epp를 보여 줘요. Dock 아이콘을 오른쪽 클릭하면 기능 메뉴가 나와요 (기본 끔) |
+| 언어 | 시스템 / 한국어 / English (기본 시스템). 바꾸면 Epp를 다시 열어야 해요 |
+| 기능별 설정 | 왼쪽 목록에서 기능을 고르면 그 기능의 설정이 나와요 |
+
+## 데이터는 어디에
+
+- 기능마다 따로 저장해요: `~/Library/Application Support/Epp/<기능 이름>/`
+- 기존 단독 앱의 데이터(예: `~/Library/Application Support/Keepy`)는 읽지도 바꾸지도 않아요.
+
+## 알려진 제한
+
+- Apple 실리콘 Mac, macOS 14 이상.
+- 임시 서명이라 처음 열 때 Gatekeeper 경고가 떠요.
+- 아직 자동 업데이트가 없어요.
+- 같은 기능의 단독 앱과 함께 켜면 단축키가 겹쳐요. 둘 중 하나만 켜 두세요.
+
+## English
+
+Epp (Eddie's app) gathers small Mac menu bar tools under one icon. Turn on only the features you want in Settings → General → Features; features that are off do nothing. Work in progress: only Keepy (clipboard history) has been moved in so far.

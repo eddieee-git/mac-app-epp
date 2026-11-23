@@ -1,0 +1,189 @@
+import AppKit
+import Combine
+import EppKit
+import SwiftUI
+
+/// Keepy: 복사한 내용을 모아 두었다가 다시 붙여 넣는 클립보드 기록.
+/// 원래 단독 앱(eddieee-git/mac-app-keepy)의 AppDelegate를 Epp 기능 약속에 맞게 옮긴 것.
+@MainActor
+public final class KeepyModule: EppModule {
+    public static let info = EppModuleInfo(
+        id: "keepy", name: "Keepy", symbol: "doc.on.clipboard",
+        summaryKo: "복사한 내용을 모아 두고 다시 붙여 넣는 클립보드 기록",
+        summaryEn: "Clipboard history to paste again"
+    )
+
+    let context: EppContext
+    let settings: AppSettings
+    let store: HistoryStore
+    private lazy var monitor = ClipboardMonitor(settings: settings) { [weak self] content, app in
+        self?.store.add(content, source: app)
+    }
+    private lazy var panel = PanelController(store: store) { [weak self] item, plainText in
+        self?.paste(item, plainText: plainText)
+    }
+    private let welcomeWindow = WelcomeWindowController()
+    private var hotKey: HotKey?
+    private var cancellables = Set<AnyCancellable>()
+
+    public required init(context: EppContext) {
+        self.context = context
+        // 기능 안 여러 곳이 AppSettings.shared를 쓰므로 Epp가 준 저장소로 먼저 바꿔 둔다.
+        settings = AppSettings(defaults: context.defaults)
+        AppSettings.shared = settings
+        store = HistoryStore(directory: context.dataDirectory)
+        welcomeWindow.openSettings = context.openSettings
+    }
+
+    public func start() {
+        // @Published는 값이 저장되기 전에 알리므로, 다음 차례에 다시 등록한다.
+        settings.$hotKey
+            .dropFirst()
+            .sink { [weak self] _ in DispatchQueue.main.async { self?.applyHotKey() } }
+            .store(in: &cancellables)
+        settings.$historyLimit
+            .dropFirst()
+            .sink { [weak self] _ in DispatchQueue.main.async { self?.store.trim() } }
+            .store(in: &cancellables)
+
+        monitor.start()
+        applyHotKey()
+
+        // 처음 켤 때는 시작 안내를 띄운다. 그다음에는 바로 붙여 넣기에 필요한 권한이 없을 때만 띄운다.
+        let needsPermission = settings.pasteAutomatically && !Paster.isTrusted
+        if !settings.hasLaunchedBefore {
+            settings.hasLaunchedBefore = true
+            showWelcome()
+        } else if needsPermission && settings.showWelcome {
+            showWelcome()
+        }
+    }
+
+    public func stop() {
+        cancellables.removeAll()
+        hotKey = nil
+        monitor.stop()
+        panel.hide()
+        welcomeWindow.close()
+        store.commitDeletion()
+        store.saveNow()
+    }
+
+    /// epp://keepy/show — 다른 도구(단축어 등)에서 기록 창을 연다.
+    public func handle(url: URL) {
+        let command = url.pathComponents.dropFirst().first ?? "show"
+        if command == "show" { showPanel() }
+    }
+
+    public func makeSettingsView() -> AnyView {
+        AnyView(KeepySettingsView(settings: settings, store: store))
+    }
+
+    public static func runSelfTest() -> Bool { SelfTest.run() }
+
+    // MARK: 동작
+
+    func showPanel() {
+        // 메뉴가 닫힌 뒤에 패널이 키 윈도우가 되도록 한 박자 늦춘다.
+        DispatchQueue.main.async { self.panel.show() }
+    }
+
+    @objc func showWelcome() { welcomeWindow.show() }
+
+    /// 항목을 클립보드에 올리고, 설정에 따라 앞에 있던 앱에 ⌘V를 보낸다.
+    func paste(_ item: ClipItem, plainText: Bool) {
+        let fromPanel = panel.isVisible
+        panel.hide()
+        Paster.write(item, store: store, plainText: plainText)
+        monitor.syncChangeCount()
+        store.markUsed(item.id)
+
+        // 붙여 넣지 않고 복사만 할 때는 잘 됐는지 알 수 있게 잠깐 알린다.
+        let center = fromPanel ? panel.lastCenter : NSEvent.mouseLocation
+        guard settings.pasteAutomatically else {
+            CopiedToast.show(at: center)
+            return
+        }
+        if Paster.isTrusted {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.08) { Paster.sendPasteKeystroke() }
+        } else {
+            // 권한이 없으면 복사만 하고, 권한을 켜는 방법을 알려 준다.
+            CopiedToast.show(at: center)
+            showWelcome()
+        }
+    }
+
+    private func applyHotKey() {
+        hotKey = nil
+        settings.hotKeyFailed = false
+        guard let combo = settings.hotKey else { return }
+        hotKey = HotKey(combo: combo) { [weak self] in self?.panel.toggle() }
+        settings.hotKeyFailed = hotKey == nil
+    }
+
+    // MARK: 메뉴바 메뉴
+
+    public func fillMenu(_ menu: NSMenu) {
+        let open = menu.addItem(withTitle: L("클립보드 기록 열기"), action: #selector(menuOpenPanel), keyEquivalent: "")
+        open.target = self
+        if let combo = settings.hotKey {
+            open.keyEquivalent = combo.menuKey
+            open.keyEquivalentModifierMask = combo.menuModifiers
+        }
+        menu.addItem(.separator())
+
+        let recent = store.items.prefix(10)
+        if recent.isEmpty {
+            let empty = menu.addItem(withTitle: L("아직 복사한 항목이 없어요"), action: nil, keyEquivalent: "")
+            empty.isEnabled = false
+        } else {
+            menu.addItem(.sectionHeader(title: L("최근 항목")))
+            for item in recent {
+                let entry = menu.addItem(withTitle: menuTitle(item), action: #selector(menuPasteItem(_:)), keyEquivalent: "")
+                entry.target = self
+                entry.representedObject = item.id
+                entry.toolTip = item.tooltip
+                if item.pinned {
+                    entry.image = NSImage(systemSymbolName: "pin.fill", accessibilityDescription: L("고정"))
+                }
+            }
+        }
+        menu.addItem(.separator())
+
+        let pause = menu.addItem(withTitle: L("기록 일시 정지"), action: #selector(menuTogglePause), keyEquivalent: "")
+        pause.target = self
+        pause.state = settings.isPaused ? .on : .off
+        let clear = menu.addItem(withTitle: L("기록 지우기…"), action: #selector(menuClearHistory), keyEquivalent: "")
+        clear.target = self
+        clear.isEnabled = store.items.contains { !$0.pinned }
+        menu.addItem(withTitle: L("시작 안내"), action: #selector(showWelcome), keyEquivalent: "").target = self
+    }
+
+    private func menuTitle(_ item: ClipItem) -> String {
+        let title = item.kind == .image ? L("이미지 %@", item.summary) : item.title
+        return title.count > 45 ? String(title.prefix(45)) + "…" : title
+    }
+
+    @objc private func menuOpenPanel() { showPanel() }
+
+    @objc private func menuPasteItem(_ sender: NSMenuItem) {
+        guard let id = sender.representedObject as? UUID,
+              let item = store.items.first(where: { $0.id == id }) else { return }
+        paste(item, plainText: false)
+    }
+
+    @objc private func menuTogglePause() { settings.isPaused.toggle() }
+
+    @objc private func menuClearHistory() {
+        NSApp.activate(ignoringOtherApps: true)
+        let alert = NSAlert()
+        alert.messageText = L("기록을 지울까요?")
+        alert.informativeText = L("고정한 항목은 남겨요. 지운 기록은 되돌릴 수 없어요.")
+        alert.addButton(withTitle: L("지우기"))
+        alert.addButton(withTitle: L("취소"))
+        alert.buttons.first?.hasDestructiveAction = true
+        if alert.runModal() == .alertFirstButtonReturn {
+            store.clear(includingPinned: false)
+        }
+    }
+}
