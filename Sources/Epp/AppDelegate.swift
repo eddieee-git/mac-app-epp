@@ -124,6 +124,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             module.fillMenu(menu)
             menu.addItem(.separator())
             menu.addItem(withTitle: L("설정…"), action: #selector(openSettings), keyEquivalent: ",").target = self
+            if module.makeGettingStarted() != nil {
+                let guide = menu.addItem(withTitle: L("시작 안내"), action: #selector(openGettingStarted(_:)), keyEquivalent: "")
+                guide.target = self
+                guide.representedObject = soloID
+            }
             menu.addItem(.separator())
             let name = type(of: module).info.name
             menu.addItem(withTitle: L("%@ 종료", name), action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
@@ -143,6 +148,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             let sub = NSMenu(title: type.info.name)
             module.fillMenu(sub)
             sub.addItem(.separator())
+            if module.makeGettingStarted() != nil {
+                let guide = sub.addItem(withTitle: L("시작 안내"), action: #selector(openGettingStarted(_:)), keyEquivalent: "")
+                guide.target = self
+                guide.representedObject = type.info.id
+            }
             let settings = sub.addItem(withTitle: L("%@ 설정…", type.info.name), action: #selector(openModuleSettings(_:)), keyEquivalent: "")
             settings.target = self
             settings.representedObject = type.info.id
@@ -152,6 +162,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         menu.addItem(withTitle: L("설정…"), action: #selector(openSettings), keyEquivalent: ",").target = self
         menu.addItem(.separator())
         menu.addItem(withTitle: L("Epp 종료"), action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
+    }
+
+    /// 시작하기 상자를 다시 보이게 하고 그 기능의 설정(일반 탭)을 연다.
+    @objc private func openGettingStarted(_ sender: NSMenuItem) {
+        guard let id = sender.representedObject as? String else { return }
+        UserDefaults.standard.set(false, forKey: EppSettingsKeys.gettingStartedHidden(id))
+        UserDefaults.standard.set("general", forKey: EppSettingsKeys.tab(id))
+        showSettings(page: id)
     }
 
     @objc private func openModuleSettings(_ sender: NSMenuItem) {

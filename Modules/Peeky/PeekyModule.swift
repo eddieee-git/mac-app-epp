@@ -120,10 +120,11 @@ public final class PeekyModule: EppModule {
         let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "-"
         ItemStore.log("launch \(Bundle.main.bundlePath) version=\(version) axTrusted=\(AX.isTrusted) preflight=\(CGPreflightScreenCaptureAccess())")
         ItemStore.shared.checkScreenCapture()
-        if !AX.isTrusted || !prefs.hasLaunchedBefore {
+        // 권한이 없으면 시작하기 상자와 함께 설정을 연다(처음 켤 때는 Epp가 이미 연다).
+        if !AX.isTrusted {
             prefs.hasLaunchedBefore = true
-            showSettings()
-            if !AX.isTrusted { AX.requestTrust() }
+            context.showGettingStarted()
+            AX.requestTrust()
         }
         ItemStore.shared.refresh(full: true) { [weak self] in self?.noteNewItems() }
     }
@@ -150,9 +151,9 @@ public final class PeekyModule: EppModule {
         StatusIconCheck.bringToFront = { _ in }
     }
 
-    public func makeSettingsView() -> AnyView {
-        AnyView(PeekySettingsView())
-    }
+    public func settingsTabs() -> [EppSettingsTab] { PeekySettings.tabs() }
+
+    public func makeGettingStarted() -> AnyView? { AnyView(PeekyGettingStarted()) }
 
     /// epp://peeky/open — 첫 그룹 바를 연다. epp://peeky/arrange — 다시 정리.
     public func handle(url: URL) {

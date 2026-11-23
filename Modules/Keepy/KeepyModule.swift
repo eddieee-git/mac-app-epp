@@ -22,7 +22,6 @@ public final class KeepyModule: EppModule {
     private lazy var panel = PanelController(store: store) { [weak self] item, plainText in
         self?.paste(item, plainText: plainText)
     }
-    private let welcomeWindow = WelcomeWindowController()
     private var hotKey: HotKey?
     private var cancellables = Set<AnyCancellable>()
 
@@ -32,7 +31,6 @@ public final class KeepyModule: EppModule {
         settings = AppSettings(defaults: context.defaults)
         AppSettings.shared = settings
         store = HistoryStore(directory: context.dataDirectory)
-        welcomeWindow.openSettings = context.openSettings
     }
 
     public func start() {
@@ -48,15 +46,6 @@ public final class KeepyModule: EppModule {
 
         monitor.start()
         applyHotKey()
-
-        // 처음 켤 때는 시작 안내를 띄운다. 그다음에는 바로 붙여 넣기에 필요한 권한이 없을 때만 띄운다.
-        let needsPermission = settings.pasteAutomatically && !Paster.isTrusted
-        if !settings.hasLaunchedBefore {
-            settings.hasLaunchedBefore = true
-            showWelcome()
-        } else if needsPermission && settings.showWelcome {
-            showWelcome()
-        }
     }
 
     public func stop() {
@@ -64,7 +53,6 @@ public final class KeepyModule: EppModule {
         hotKey = nil
         monitor.stop()
         panel.hide()
-        welcomeWindow.close()
         store.commitDeletion()
         store.saveNow()
     }
@@ -75,8 +63,12 @@ public final class KeepyModule: EppModule {
         if command == "show" { showPanel() }
     }
 
-    public func makeSettingsView() -> AnyView {
-        AnyView(KeepySettingsView(settings: settings, store: store))
+    public func settingsTabs() -> [EppSettingsTab] {
+        KeepySettings.tabs(settings: settings, store: store)
+    }
+
+    public func makeGettingStarted() -> AnyView? {
+        AnyView(KeepyGettingStarted(settings: settings, store: store))
     }
 
     public static func runSelfTest() -> Bool { SelfTest.run() }
@@ -88,8 +80,6 @@ public final class KeepyModule: EppModule {
         DispatchQueue.main.async { self.panel.show() }
     }
 
-    @objc func showWelcome() { welcomeWindow.show() }
-
     /// 항목을 클립보드에 올리고, 설정에 따라 앞에 있던 앱에 ⌘V를 보낸다.
     func paste(_ item: ClipItem, plainText: Bool) {
         let fromPanel = panel.isVisible
@@ -97,6 +87,7 @@ public final class KeepyModule: EppModule {
         Paster.write(item, store: store, plainText: plainText)
         monitor.syncChangeCount()
         store.markUsed(item.id)
+        if !settings.hasPasted { settings.hasPasted = true }
 
         // 붙여 넣지 않고 복사만 할 때는 잘 됐는지 알 수 있게 잠깐 알린다.
         let center = fromPanel ? panel.lastCenter : NSEvent.mouseLocation
@@ -107,9 +98,9 @@ public final class KeepyModule: EppModule {
         if Paster.isTrusted {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.08) { Paster.sendPasteKeystroke() }
         } else {
-            // 권한이 없으면 복사만 하고, 권한을 켜는 방법을 알려 준다.
+            // 권한이 없으면 복사만 하고, 설정의 시작하기 상자로 권한을 켜는 방법을 알려 준다.
             CopiedToast.show(at: center)
-            showWelcome()
+            context.showGettingStarted()
         }
     }
 
@@ -156,7 +147,6 @@ public final class KeepyModule: EppModule {
         let clear = menu.addItem(withTitle: L("기록 지우기…"), action: #selector(menuClearHistory), keyEquivalent: "")
         clear.target = self
         clear.isEnabled = store.items.contains { !$0.pinned }
-        menu.addItem(withTitle: L("시작 안내"), action: #selector(showWelcome), keyEquivalent: "").target = self
     }
 
     private func menuTitle(_ item: ClipItem) -> String {

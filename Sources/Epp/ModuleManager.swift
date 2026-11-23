@@ -44,6 +44,12 @@ final class ModuleManager: ObservableObject {
         if on {
             enabledIDs.append(id)
             launch(type)
+            // 처음 켰으면 그 기능의 설정을 열어 시작하기 상자를 보여 준다.
+            let key = "\(id).everEnabled"
+            if !UserDefaults.standard.bool(forKey: key) {
+                UserDefaults.standard.set(true, forKey: key)
+                openSettings(id)
+            }
         } else {
             enabledIDs.removeAll { $0 == id }
             running.removeValue(forKey: id)?.stop()
@@ -88,7 +94,7 @@ final class ModuleManager: ObservableObject {
         let directory = Self.dataDirectory(for: info)
         try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         let defaults = UserDefaults(suiteName: Self.defaultsSuite(for: info)) ?? .standard
-        return EppContext(defaults: defaults, dataDirectory: directory,
+        return EppContext(moduleID: info.id, defaults: defaults, dataDirectory: directory,
                           openSettings: { [weak self] in self?.openSettings(info.id) },
                           hostStatusItems: { [weak self] in self?.hostStatusItems() ?? [] },
                           appName: Self.folderName)

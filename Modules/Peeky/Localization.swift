@@ -22,7 +22,14 @@ enum Localization {
     }
 
     static let pairs: [(String, String)] = [
+        ("일반", "General"),
         // Epp에서 바뀐 문구
+        ("아이콘", "Icons"),
+        ("그룹 단축키", "Group shortcuts"),
+        ("보조 키", "Modifier keys"),
+        ("검색어 지우기", "Clear search"),
+        ("손쉬운 사용 권한 허용하기 (아래 일반 → 권한)", "Allow Accessibility (General → Permissions below)"),
+        ("아이콘 탭에서 숨길 아이콘을 「숨기기」로 고르기", "In the Icons tab, set the icons to hide to “Hide”"),
         ("Peeky 설정…", "Peeky Settings…"),
         ("Peeky나 Epp 아이콘이 › 버튼 왼쪽에 있어요", "The Peeky or Epp icon is left of the › button"),
         ("이대로 숨기면 그 아이콘도 사라져서 펼쳐 두었어요. Peeky 아이콘을 오른쪽 끝으로 옮긴 뒤 › 버튼을 다시 눌러 주세요. Epp 아이콘은 ⌘를 누른 채 › 오른쪽으로 끌어 주세요.",
@@ -55,9 +62,6 @@ enum Localization {
         ("손쉬운 사용 권한을 주면 항목 목록이 여기에 나타나요.", "Items appear here once Accessibility is allowed."),
         ("찾은 항목이 없어요.", "No items found."),
         ("닫기", "Close"),
-        ("시작하기", "Getting started"),
-        ("손쉬운 사용 권한 허용하기", "Allow Accessibility"),
-        ("아래 「메뉴바 아이콘」에서 숨길 아이콘을 「숨기기」로 고르기", "Below in “Menu bar icons”, set the icons you want to hide to “Hide”"),
         ("「숨기기」 아이콘을 메뉴바에서 숨기기 켜기", "Turn on “Hide ‘Hide’ icons from the menu bar”"),
         ("다 했으면 메뉴바의 Peeky 아이콘을 눌러 보세요. 숨긴 아이콘이 바에 모여 있어요.", "When you're done, click the Peeky icon in the menu bar. Your hidden icons are gathered in the bar."),
         ("맨 오른쪽으로 옮기기 (가장 오래 보이게)", "Move to the right end (stays visible longest)"),
@@ -82,7 +86,6 @@ enum Localization {
         ("아이콘 자리가 고른 대로가 아니면", "If icons aren't where you chose"),
         ("다시 정리", "Arrange again"),
         ("메뉴바에서 숨기기를 켜면 › 버튼이 생겨요. › 오른쪽 아이콘은 늘 보이고, 왼쪽 아이콘은 숨겨져요. ‹ ›를 누르면 잠깐 펼치거나 다시 숨겨요. 노치 뒤에 있어 잡을 수 없는 아이콘은 옮기지 못해요.", "Hiding adds a › button to the menu bar. Icons to its right always show; icons to its left are hidden. Click ‹ › to show them briefly or hide them again. Icons behind the notch can't be grabbed, so Peeky can't move them."),
-        ("기본 설정", "General"),
         ("바 열기", "Open Bar"),
         ("숨긴 아이콘 보이기", "Show Hidden Icons"),
         ("아이콘 다시 숨기기", "Hide Icons Again"),
@@ -110,9 +113,7 @@ enum Localization {
         ("각 항목이 어느 그룹 바에 보일지 고르세요. 「메뉴바에만」은 Peeky 바에 넣지 않고 메뉴바에 그대로 둬요. 바의 항목을 클릭하면 실제 메뉴가 열리고, 오른쪽 클릭은 보조 메뉴를 시도해요. 바에서 항목을 끌면 순서를 바꿀 수 있어요.", "Choose which group's bar each item appears in. “Menu bar only” keeps an item out of every Peeky bar and leaves it in the menu bar as usual. Clicking an item in the bar opens its real menu; right-click tries the secondary menu. Drag items in the bar to reorder."),
         ("진단 로그 남기기", "Keep a diagnostic log"),
         ("로그 파일 보기", "Show log file"),
-        ("고급", "Advanced"),
         ("권한이 인식되지 않을 때 원인을 찾는 데 써요. ~/Library/Logs 폴더의 로그 파일에 권한 상태만 기록하고, 끄면 파일을 지워요.", "Helps find out why permissions aren't recognized. Only permission status is written to a log file in ~/Library/Logs; turning it off deletes the file."),
-        ("허용하기", "Allow"),
         ("다시 열기", "Reopen"),
         ("시스템 설정에서 켠 뒤에는 Epp를 다시 열어야 적용돼요", "After turning it on in System Settings, reopen Epp to apply it"),
         ("그룹 이름", "Group name"),

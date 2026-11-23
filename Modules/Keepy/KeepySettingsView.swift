@@ -1,46 +1,40 @@
 import EppKit
 import SwiftUI
 
-/// Epp 설정 창에서 Keepy를 골랐을 때 보이는 화면. 탭: 일반 · 제외 앱 · 단축키
-/// (로그인 시 실행, 언어, 업데이트, 정보는 Epp 본체 설정의 "일반"에 있다)
-struct KeepySettingsView: View {
-    enum Tab: String, CaseIterable {
-        case general, ignored, shortcuts
-
-        var title: String {
-            switch self {
-            case .general: return L("일반")
-            case .ignored: return L("제외 앱")
-            case .shortcuts: return L("단축키")
-            }
-        }
+/// Epp 설정 창에서 Keepy를 골랐을 때의 탭: 일반 · 제외 앱 · 단축키.
+/// 틀(머리·시작하기·탭·검색)은 Epp 본체가 그린다. 로그인 시 실행, 언어, 업데이트, 정보는 Epp 일반 쪽에 있다.
+enum KeepySettings {
+    @MainActor
+    static func tabs(settings: AppSettings, store: HistoryStore) -> [EppSettingsTab] {
+        [
+            EppSettingsTab("general", L("일반"), keywords: [
+                L("권한"), L("손쉬운 사용"), L("기록"), L("보관할 항목 수"), L("기록 창 위치"), L("저장 위치"),
+                L("모든 기록 지우기…"), L("붙여 넣기"), L("고르면 바로 붙여 넣기"),
+            ]) { GeneralTab(settings: settings, store: store) },
+            EppSettingsTab("ignored", L("제외 앱"), keywords: [
+                L("이 앱에서 복사한 내용은 기록하지 않아요"), L("실행 중인 앱에서 더하기"),
+            ]) { IgnoredAppsTab(settings: settings) },
+            EppSettingsTab("shortcuts", L("단축키"), keywords: [
+                L("클립보드 기록 열기"), L("전역 단축키"), L("기록 창 안에서"),
+            ]) { ShortcutsTab(settings: settings) },
+        ]
     }
+}
 
+/// 설정 맨 위 시작하기 상자. 끝낸 단계는 체크로 바뀐다.
+struct KeepyGettingStarted: View {
     @ObservedObject var settings: AppSettings
-    let store: HistoryStore
-    // 마지막에 본 탭을 기억해서 다음에 열 때 그 탭부터 보여 준다.
-    @AppStorage("keepy.settingsTab") private var tab: Tab = .general
+    @ObservedObject var store: HistoryStore
+    @State private var trusted = Paster.isTrusted
+    private let poll = Timer.publish(every: 1.5, on: .main, in: .common).autoconnect()
 
     var body: some View {
-        VStack(spacing: 0) {
-            Picker(L("설정"), selection: $tab) {
-                ForEach(Tab.allCases, id: \.self) { Text($0.title).tag($0) }
-            }
-            .pickerStyle(.segmented)
-            .labelsHidden()
-            .fixedSize()
-            .padding(.top, 12)
-
-            Group {
-                switch tab {
-                case .general: GeneralTab(settings: settings, store: store)
-                case .ignored: IgnoredAppsTab(settings: settings)
-                case .shortcuts: ShortcutsTab(settings: settings)
-                }
-            }
-            .formStyle(.grouped)
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        EppStepList([
+            .init(L("손쉬운 사용 권한 허용하기 (아래 일반 → 권한)"), done: trusted || !settings.pasteAutomatically),
+            .init(L("평소처럼 복사하기. Keepy가 기록해 둬요."), done: !store.items.isEmpty),
+            .init(L("%@로 기록을 열고 ↩로 붙여 넣기", settings.hotKey?.displayText ?? L("메뉴")), done: settings.hasPasted),
+        ], footer: L("⌘1~9로 바로 고르고, ⌘P로 자주 쓰는 항목을 맨 위에 고정해요. 비밀번호 관리자에서 복사한 내용은 기록하지 않아요."))
+        .onReceive(poll) { _ in trusted = Paster.isTrusted }
     }
 }
 
@@ -56,6 +50,15 @@ private struct GeneralTab: View {
 
     var body: some View {
         Form {
+            Section(L("권한")) {
+                EppPermissionRow(title: L("손쉬운 사용"),
+                                 detail: L("고른 항목을 앞에 있던 앱에 바로 붙여 넣는 데 필요해요. 없어도 클립보드에 복사는 돼요."),
+                                 granted: trusted) {
+                    Paster.requestTrust()
+                    Paster.openAccessibilitySettings()
+                }
+            }
+
             Section(L("기록")) {
                 Picker(L("보관할 항목 수"), selection: $settings.historyLimit) {
                     ForEach(AppSettings.historyLimits, id: \.self) { Text(L("%ld개", $0)).tag($0) }
@@ -73,20 +76,6 @@ private struct GeneralTab: View {
 
             Section {
                 Toggle(L("고르면 바로 붙여 넣기"), isOn: $settings.pasteAutomatically)
-                if settings.pasteAutomatically {
-                    HStack {
-                        Label(trusted ? L("손쉬운 사용 권한 허용됨") : L("손쉬운 사용 권한이 필요해요"),
-                              systemImage: trusted ? "checkmark.circle.fill" : "exclamationmark.circle.fill")
-                            .foregroundStyle(trusted ? .green : .orange)
-                        Spacer()
-                        if !trusted {
-                            Button(L("허용하기")) {
-                                Paster.requestTrust()
-                                Paster.openAccessibilitySettings()
-                            }
-                        }
-                    }
-                }
             } header: {
                 Text(L("붙여 넣기"))
             } footer: {

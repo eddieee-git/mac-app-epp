@@ -39,11 +39,14 @@ public protocol EppModule: AnyObject {
     func stop()
 
     /// 메뉴바 메뉴에 들어갈 항목을 채운다. 메뉴를 열 때마다 새로 부른다.
-    /// 본체가 끝에 "<이름> 설정…"을 붙이므로 설정 항목은 넣지 않는다.
+    /// 순서: 주 동작(열기) → 기능 고유 항목. 본체가 끝에 "시작 안내"와 "<이름> 설정…"을 붙이므로 넣지 않는다.
     func fillMenu(_ menu: NSMenu)
 
-    /// 설정 창에서 이 기능을 골랐을 때 보여 줄 화면.
-    func makeSettingsView() -> AnyView
+    /// 설정 탭. 틀(머리·탭·검색)은 본체가 `EppSettingsPage`로 그린다. 순서: 일반 · (고유 탭) · 단축키.
+    func settingsTabs() -> [EppSettingsTab]
+
+    /// 설정 맨 위 "시작하기" 상자에 넣을 내용(보통 `EppStepList`). 메뉴의 "시작 안내"로 다시 연다.
+    func makeGettingStarted() -> AnyView?
 
     /// `epp://<id>/<명령>` 주소로 열렸을 때. 예: epp://keepy/show
     func handle(url: URL)
@@ -54,6 +57,7 @@ public protocol EppModule: AnyObject {
 
 public extension EppModule {
     func handle(url: URL) {}
+    func makeGettingStarted() -> AnyView? { nil }
 }
 
 /// 본체가 기능에 넘겨주는 것: 그 기능만 쓰는 설정 저장소와 데이터 폴더, 본체 동작.
@@ -65,13 +69,24 @@ public final class EppContext {
     public let dataDirectory: URL
     /// 설정 창을 열고 이 기능을 보여 준다.
     public let openSettings: () -> Void
+    /// 시작하기 상자를 다시 보이게 하고 설정 창에서 이 기능을 연다(권한이 없어 동작을 못 할 때 등).
+    public var showGettingStarted: () -> Void {
+        { [defaults = UserDefaults.standard, id = moduleID, openSettings] in
+            defaults.set(false, forKey: EppSettingsKeys.gettingStartedHidden(id))
+            defaults.set("general", forKey: EppSettingsKeys.tab(id))
+            openSettings()
+        }
+    }
+    /// 이 기능의 id
+    public let moduleID: String
     /// Epp 본체의 메뉴바 아이콘. 메뉴바 아이콘을 숨기는 기능(Peeky)이 이것까지 숨기지 않게 한다.
     public let hostStatusItems: () -> [NSStatusItem]
     /// 진단 로그 같은 파일 이름 앞에 붙일 앱 이름 ("Epp" 또는 "Epp Dev")
     public let appName: String
 
-    public init(defaults: UserDefaults, dataDirectory: URL, openSettings: @escaping () -> Void,
+    public init(moduleID: String, defaults: UserDefaults, dataDirectory: URL, openSettings: @escaping () -> Void,
                 hostStatusItems: @escaping () -> [NSStatusItem] = { [] }, appName: String = "Epp") {
+        self.moduleID = moduleID
         self.defaults = defaults
         self.dataDirectory = dataDirectory
         self.openSettings = openSettings

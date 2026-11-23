@@ -1,46 +1,80 @@
 import EppKit
 import SwiftUI
 
-/// Epp 설정 창에서 Peeky를 골랐을 때 보이는 화면.
-/// (로그인 시 실행, 언어, 업데이트, 정보는 Epp 본체 설정의 "일반"에 있다)
+/// Epp 설정 창에서 Peeky를 골랐을 때의 탭: 일반 · 아이콘 · 그룹 · 단축키.
+/// 틀(머리·시작하기·탭·검색)은 Epp 본체가 그린다. 로그인 시 실행, 언어, 업데이트, 정보는 Epp 일반 쪽에 있다.
+enum PeekySettings {
+    @MainActor
+    static func tabs() -> [EppSettingsTab] {
+        [
+            EppSettingsTab("general", L("일반"), keywords: [
+                L("권한"), L("손쉬운 사용 (필수)"), L("화면 기록 (선택)"), L("메뉴바 정리"), L("다시 정리"),
+                L("Peeky 아이콘을 오른쪽 끝으로 옮기기"), L("문제 해결"), L("진단 로그 남기기"),
+            ]) { PeekySettingsView(tab: .general) },
+            EppSettingsTab("icons", L("아이콘"), keywords: [
+                L("메뉴바 아이콘"), L("보이기"), L("숨기기"), L("「숨기기」 아이콘을 메뉴바에서 숨기기"), L("항목 검색"),
+            ]) { PeekySettingsView(tab: .icons) },
+            EppSettingsTab("groups", L("그룹"), keywords: [
+                L("그룹 추가"), L("Peeky 바 모양"), L("줄 수"), L("바 최대 너비"), L("순서 초기화"),
+            ]) { PeekySettingsView(tab: .groups) },
+            EppSettingsTab("shortcuts", L("단축키"), keywords: [
+                L("그룹 단축키"), L("보조 키"),
+            ]) { PeekySettingsView(tab: .shortcuts) },
+        ]
+    }
+}
+
+/// 설정 맨 위 시작하기 상자. 끝낸 단계는 체크로 바뀐다.
+struct PeekyGettingStarted: View {
+    @ObservedObject private var store = ItemStore.shared
+    @ObservedObject private var prefs: Preferences = Preferences.shared
+    @State private var axTrusted = AX.isTrusted
+    private let poll = Timer.publish(every: 2, on: .main, in: .common).autoconnect()
+
+    var body: some View {
+        EppStepList([
+            .init(L("손쉬운 사용 권한 허용하기 (아래 일반 → 권한)"), done: axTrusted),
+            .init(L("아이콘 탭에서 숨길 아이콘을 「숨기기」로 고르기"),
+                  done: store.items.contains { !$0.isFixed && prefs.group(for: $0.id) != nil }),
+            .init(L("「숨기기」 아이콘을 메뉴바에서 숨기기 켜기"), done: prefs.hideInMenuBar),
+        ], footer: L("다 했으면 메뉴바의 Peeky 아이콘을 눌러 보세요. 숨긴 아이콘이 바에 모여 있어요."))
+        .onReceive(poll) { _ in axTrusted = AX.isTrusted }
+    }
+}
 
 struct PeekySettingsView: View {
+    enum Tab { case general, icons, groups, shortcuts }
+
+    let tab: Tab
     @ObservedObject private var store = ItemStore.shared
-    @ObservedObject private var prefs = Preferences.shared
+    @ObservedObject private var prefs: Preferences = Preferences.shared
     @State private var axTrusted = AX.isTrusted
     @State private var search = ""
     /// 메뉴바에서 안 보이는 Peeky 그룹 아이콘 이름들.
     @State private var hiddenIcons: [String] = []
 
-    /// 권한·아이콘 가려짐은 Peeky가 앞으로 올 때 바로 다시 보고, 그 밖에는 가끔만 확인한다.
+    /// 권한·아이콘 가려짐은 Epp가 앞으로 올 때 바로 다시 보고, 그 밖에는 가끔만 확인한다.
     private let poll = Timer.publish(every: 5, on: .main, in: .common).autoconnect()
-    @AppStorage("peeky.onboardingDone") private var onboardingDone = false
 
-    @State private var tab = 0
+    init(tab: Tab) { self.tab = tab }
 
     var body: some View {
-        TabView(selection: $tab) {
-            Form {
+        Form {
+            switch tab {
+            case .general:
                 if !hiddenIcons.isEmpty { hiddenIconSection }
-                if !onboardingDone { onboardingSection }
                 permissionsSection
-                itemsSection
-            }
-            .formStyle(.grouped)
-            .tabItem { Text(L("기본 설정")) }
-            .tag(0)
-
-            Form {
-                barSection
                 menuBarSection
-                groupsSection
                 advancedSection
+            case .icons:
+                itemsSection
+            case .groups:
+                groupsSection
+                barSection
+            case .shortcuts:
+                shortcutsSection
             }
-            .formStyle(.grouped)
-            .tabItem { Text(L("고급")) }
-            .tag(1)
         }
-        .searchable(text: $search, placement: .toolbar, prompt: L("항목 검색"))
         .onAppear {
             store.refresh(full: true)
             hiddenIcons = StatusIconCheck.hiddenGroupNames()
@@ -66,34 +100,6 @@ struct PeekySettingsView: View {
 
     // MARK: Sections
 
-    /// 처음 쓰는 사람을 위한 세 단계. 닫으면 다시 나오지 않는다.
-    private var onboardingSection: some View {
-        Section {
-            onboardingStep(1, L("손쉬운 사용 권한 허용하기"), done: axTrusted)
-            onboardingStep(2, L("아래 「메뉴바 아이콘」에서 숨길 아이콘을 「숨기기」로 고르기"),
-                           done: store.items.contains { !$0.isFixed && prefs.group(for: $0.id) != nil })
-            onboardingStep(3, L("「숨기기」 아이콘을 메뉴바에서 숨기기 켜기"), done: prefs.hideInMenuBar)
-        } header: {
-            HStack {
-                Text(L("시작하기"))
-                Spacer()
-                Button(L("닫기")) { onboardingDone = true }.buttonStyle(.borderless).font(.callout)
-            }
-        } footer: {
-            Text(L("다 했으면 메뉴바의 Peeky 아이콘을 눌러 보세요. 숨긴 아이콘이 바에 모여 있어요."))
-                .font(.caption).foregroundStyle(.secondary)
-        }
-    }
-
-    private func onboardingStep(_ number: Int, _ text: String, done: Bool) -> some View {
-        HStack(spacing: 10) {
-            Image(systemName: done ? "checkmark.circle.fill" : "\(number).circle")
-                .foregroundStyle(done ? .green : .secondary)
-                .font(.title3)
-            Text(text).foregroundStyle(done ? .secondary : .primary)
-        }
-    }
-
     private var hiddenIconSection: some View {
         Section {
             Label(L("Peeky 아이콘이 메뉴바에서 안 보여요 (%@)", hiddenIcons.joined(separator: ", ")),
@@ -109,18 +115,47 @@ struct PeekySettingsView: View {
 
     private var permissionsSection: some View {
         Section(L("권한")) {
-            permissionRow(title: L("손쉬운 사용 (필수)"),
-                          detail: L("다른 앱의 메뉴바 항목을 찾고 클릭하는 데 필요해요."),
-                          granted: axTrusted, showsRelaunch: false) {
+            EppPermissionRow(title: L("손쉬운 사용 (필수)"),
+                             detail: L("다른 앱의 메뉴바 항목을 찾고 클릭하는 데 필요해요."),
+                             granted: axTrusted) {
                 AX.requestTrust()
                 AX.openAccessibilitySettings()
             }
-            permissionRow(title: L("화면 기록 (선택)"),
-                          detail: L("실제 아이콘 모양을 보여 줘요. 없으면 앱 아이콘으로 대신 보여요. 시스템 설정에서 Epp를 허용한 뒤 Epp를 다시 열어야 적용돼요."),
-                          granted: store.screenCaptureOK, showsRelaunch: true) {
+            EppPermissionRow(title: L("화면 기록 (선택)"),
+                             detail: L("실제 아이콘 모양을 보여 줘요. 없으면 앱 아이콘으로 대신 보여요. 시스템 설정에서 Epp를 허용한 뒤 Epp를 다시 열어야 적용돼요."),
+                             granted: store.screenCaptureOK) {
                 AX.requestScreenCapture()
                 DispatchQueue.main.asyncAfter(deadline: .now() + 2) { store.checkScreenCapture() }
+            } extra: {
+                Button(L("다시 열기")) { EppApp.relaunch() }
+                    .help(L("시스템 설정에서 켠 뒤에는 Epp를 다시 열어야 적용돼요"))
             }
+        }
+    }
+
+    /// 그룹을 여는 단축키: 보조 키 하나를 고르면 B는 첫 그룹, 1~9는 각 그룹.
+    private var shortcutsSection: some View {
+        Section {
+            Picker(L("보조 키"), selection: $prefs.hotKeyModifiers) {
+                ForEach(HotKeyModifiers.allCases) { Text($0.title).tag($0) }
+            }
+            if prefs.hotKeyModifiers != .off {
+                if let first = prefs.groups.first {
+                    LabeledContent(L("%@ 열기", first.name)) {
+                        Text("\(prefs.hotKeyModifiers.symbol)B").font(.system(.body, design: .monospaced)).foregroundStyle(.secondary)
+                    }
+                }
+                ForEach(Array(prefs.groups.prefix(9).enumerated()), id: \.element.id) { index, group in
+                    LabeledContent(L("%@ 열기", group.name)) {
+                        Text("\(prefs.hotKeyModifiers.symbol)\(index + 1)").font(.system(.body, design: .monospaced)).foregroundStyle(.secondary)
+                    }
+                }
+            }
+        } header: {
+            Text(L("그룹 단축키"))
+        } footer: {
+            Text(L("그룹 단축키에 쓸 보조 키. 1~9는 각 그룹, B는 첫 그룹이에요."))
+                .font(.caption).foregroundStyle(.secondary)
         }
     }
 
@@ -139,10 +174,6 @@ struct PeekySettingsView: View {
                     Text("\(Int(prefs.maxStripWidth))pt").monospacedDigit().foregroundStyle(.secondary)
                 }
             }
-            Picker(L("단축키"), selection: $prefs.hotKeyModifiers) {
-                ForEach(HotKeyModifiers.allCases) { Text($0.title).tag($0) }
-            }
-            .help(L("그룹 단축키에 쓸 보조 키. 1~9는 각 그룹, B는 첫 그룹이에요."))
             LabeledContent(L("바 안의 순서")) {
                 Button(L("순서 초기화")) { prefs.itemOrder = [] }
                     .disabled(prefs.itemOrder.isEmpty)
@@ -189,11 +220,24 @@ struct PeekySettingsView: View {
         }
     }
 
+    @ViewBuilder
     private var itemsSection: some View {
         Section {
             Toggle(isOn: $prefs.hideInMenuBar) {
                 Text(L("「숨기기」 아이콘을 메뉴바에서 숨기기"))
                 Text(L("켜면 Peeky가 아이콘 자리를 옮겨 정리해요. 정리하는 동안 마우스가 잠깐 움직여요."))
+            }
+        }
+        Section {
+            // 목록을 거르는 검색. 창 전체 검색(왼쪽 위)과 따로, 이 목록 바로 위에 둔다.
+            HStack(spacing: 6) {
+                Image(systemName: "magnifyingglass").foregroundStyle(.secondary).accessibilityHidden(true)
+                TextField(L("항목 검색"), text: $search).textFieldStyle(.plain)
+                if !search.isEmpty {
+                    Button { search = "" } label: { Image(systemName: "xmark.circle.fill") }
+                        .buttonStyle(.borderless).foregroundStyle(.secondary)
+                        .accessibilityLabel(L("검색어 지우기"))
+                }
             }
             if !axTrusted {
                 Text(L("손쉬운 사용 권한을 주면 항목 목록이 여기에 나타나요.")).foregroundStyle(.secondary)
@@ -252,27 +296,6 @@ struct PeekySettingsView: View {
     }
 
     // MARK: Rows
-
-    @ViewBuilder
-    private func permissionRow(title: String, detail: String, granted: Bool, showsRelaunch: Bool,
-                               request: @escaping () -> Void) -> some View {
-        HStack(alignment: .firstTextBaseline) {
-            Image(systemName: granted ? "checkmark.circle.fill" : "exclamationmark.circle")
-                .foregroundStyle(granted ? .green : .orange)
-            VStack(alignment: .leading, spacing: 2) {
-                Text(title)
-                Text(detail).font(.caption).foregroundStyle(.secondary)
-            }
-            Spacer()
-            if !granted {
-                Button(L("허용하기"), action: request)
-                if showsRelaunch {
-                    Button(L("다시 열기")) { EppApp.relaunch() }
-                        .help(L("시스템 설정에서 켠 뒤에는 Epp를 다시 열어야 적용돼요"))
-                }
-            }
-        }
-    }
 
     @ViewBuilder
     private func groupRow(_ group: ItemGroup, index: Int) -> some View {

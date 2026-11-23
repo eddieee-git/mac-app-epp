@@ -47,13 +47,9 @@ final class AppSettings: ObservableObject {
     @Published var isPaused: Bool { didSet { defaults.set(isPaused, forKey: "isPaused") } }
     /// 기록 열기 전역 단축키. nil이면 끔.
     @Published var hotKey: KeyCombo? { didSet { saveHotKey() } }
-    /// 시작할 때 권한이 없으면 시작 안내를 다시 보여 줄지 ("다음부터 열지 않기"를 켜면 false)
-    @Published var showWelcome: Bool { didSet { defaults.set(showWelcome, forKey: "showWelcome") } }
-    /// 처음 실행했는지. 처음에는 권한과 상관없이 시작 안내를 보여 준다.
-    var hasLaunchedBefore: Bool {
-        get { defaults.bool(forKey: "hasLaunchedBefore") }
-        set { defaults.set(newValue, forKey: "hasLaunchedBefore") }
-    }
+
+    /// 기록 창에서 골라 붙여 넣어 본 적이 있는지(시작하기 3단계)
+    @Published var hasPasted: Bool { didSet { defaults.set(hasPasted, forKey: "hasPasted") } }
 
     /// 단축키를 시스템에 등록하지 못했는지 (저장하지 않음)
     @Published var hotKeyFailed = false
@@ -66,7 +62,7 @@ final class AppSettings: ObservableObject {
         panelPosition = defaults.string(forKey: "panelPosition").flatMap(PanelPosition.init) ?? .mouse
         ignoredApps = defaults.string(forKey: "ignoredApps") ?? Self.defaultIgnoredApps
         isPaused = defaults.bool(forKey: "isPaused")
-        showWelcome = defaults.object(forKey: "showWelcome") as? Bool ?? true
+        hasPasted = defaults.bool(forKey: "hasPasted")
         if let data = defaults.data(forKey: "hotKey") {
             // 빈 값은 사용자가 단축키를 끈 것
             hotKey = data.isEmpty ? nil : (try? JSONDecoder().decode(KeyCombo.self, from: data)) ?? .openHistoryDefault

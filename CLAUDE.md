@@ -37,12 +37,13 @@ Sources/EppKit/     모든 기능이 같이 쓰는 부품
   EppModule.swift     기능 약속(EppModule), 기능 정보(EppModuleInfo), 본체가 넘겨주는 것(EppContext)
   HotKey.swift        KeyCombo, 전역 단축키(번호 자동 배정, 처리기 하나)
   EppLanguage.swift   언어(설정의 "language"), 다시 열기, esc로 닫히는 창
+  EppSettings.swift   기능 설정 틀(EppSettingsPage, EppSettingsTab), 시작하기(EppStepList), 권한 줄(EppPermissionRow)
 Sources/Epp/        본체
   main.swift          Dock 아이콘(설정 "showInDock", 기본 끔), --self-test, --only <id>(단독 실행), 하나만 실행
   AppDelegate.swift   메뉴바 아이콘·메뉴(기능마다 하위 메뉴), Dock 메뉴, 앱 메뉴, epp:// 주소, DockIcon
   ModuleList.swift    들어 있는 기능 목록(순서대로 메뉴·설정에 나옴)
   ModuleManager.swift 켜기/끄기, 기능별 저장소(UserDefaults "<번들 ID>.<id>", 폴더 "<Epp>/<이름>")
-  SettingsWindow.swift 설정 창: 왼쪽 일반 + 기능 목록, 오른쪽 고른 쪽 설정
+  SettingsWindow.swift 설정 창: 왼쪽 설정 검색 + 일반 + 기능 목록, 오른쪽 고른 쪽(기능은 EppSettingsPage)
   SelfTest.swift      본체 점검 후 모든 기능의 runSelfTest()
 Modules/<이름>/     기능 하나 (예: Modules/Keepy)
 ```
@@ -53,7 +54,7 @@ Modules/<이름>/     기능 하나 (예: Modules/Keepy)
 2. `<이름>Module.swift`를 만들어 `EppModule`을 따른다. 기존 `AppDelegate`의 내용을 옮긴다:
    - 시작 → `start()`, 끝낼 때 저장 → `stop()` (타이머·단축키·창을 모두 멈춘다)
    - 메뉴바 메뉴의 고유 항목 → `fillMenu(_:)` (설정…/업데이트/종료는 본체가 붙인다)
-   - 설정 창 → `makeSettingsView()` (탭에서 **정보**, 일반 탭의 **로그인 시 실행·언어·업데이트**를 뺀다)
+   - 설정 창 → `settingsTabs()`, 시작 안내 창 → `makeGettingStarted()` (아래 "화면 규칙". 정보·로그인·언어·업데이트는 뺀다)
    - URL 스킴 → `handle(url:)` (`epp://<id>/<명령>`)
 3. 저장 위치를 바꾼다: `UserDefaults.standard` → `context.defaults`, `Application Support/<이름>` → `context.dataDirectory`.
 4. 언어: 기능의 `Localization.isKorean`은 `EppLanguage.isKorean`을 돌려준다. 단축키는 EppKit의 `HotKey(combo:action:)`.
@@ -73,7 +74,7 @@ Modules/<이름>/     기능 하나 (예: Modules/Keepy)
 - `AppDelegate` → `KeepyModule`. 앱 아이콘으로 열기(copyOnly), 로그인 항목으로 켜졌는지 확인은 뺐다.
 - `AppSettings.shared`는 `KeepyModule`이 `context.defaults`로 만들어 넣는다.
 - 설정: 일반 · 제외 앱 · 단축키 (정보·로그인·언어·업데이트는 본체로).
-- 시작 안내에서 업데이트 칸을 뺐다. "설정 열기"는 Epp 설정의 Keepy를 연다.
+- 시작 안내 창(WelcomeWindow)을 지우고 설정 맨 위 시작하기 상자로 바꿨다. 권한 없이 붙여 넣으면 `context.showGettingStarted()`.
 - 단축키 겹침 경고에 단독 Keepy 앱(`com.eddieee.Keepy`)도 넣었다.
 
 ## Peeky (Modules/Peeky)
@@ -88,6 +89,21 @@ Modules/<이름>/     기능 하나 (예: Modules/Keepy)
 - 진단 로그: `~/Library/Logs/<Epp 이름> Peeky.log`.
 - `Preferences.shared`가 `Preferences!`라서 `let prefs = Preferences.shared`처럼 쓰면 Optional이 된다. 타입을 적는다(`let prefs: Preferences = …`).
 
+## 화면 규칙 (모든 기능이 같게)
+
+본체가 틀을 그리고, 기능은 내용만 넘긴다. 기능이 자기 설정 창·시작 안내 창을 따로 만들지 않는다.
+
+- **설정**: `settingsTabs()`가 `[EppSettingsTab]`을 돌려준다. 본체가 `EppSettingsPage`로 그린다:
+  머리(아이콘·이름·설명) → 시작하기 상자 → 위쪽 탭 → 고른 탭의 `Form`(`.grouped`).
+  - 탭 순서: **일반**(id `general`) · (기능 고유 탭) · **단축키**(id `shortcuts`). 단축키가 없으면 단축키 탭을 빼도 된다.
+  - **일반** 탭의 첫 섹션은 권한이 필요한 기능이면 **권한**. 줄은 `EppPermissionRow`(허용됨 초록 / 필요 주황 + 허용하기).
+  - 로그인 시 실행, 언어, Dock, 업데이트, 정보는 본체 일반 쪽에만 둔다.
+  - 탭마다 `keywords`에 그 탭의 설정 이름(`L("…")` 그대로)을 넣는다. 설정 창 왼쪽 위 **설정 검색**이 이걸로 찾는다.
+  - 창 도구 막대(`.searchable(placement: .toolbar)`)를 쓰지 않는다. 다른 쪽까지 모양이 바뀐다. 목록을 거르는 검색은 그 목록 바로 위에 둔다.
+- **시작하기**: `makeGettingStarted()`가 `EppStepList`(3단계 안팎 + 짧은 footer)를 돌려준다. 끝낸 단계는 체크로 바뀐다.
+  처음 켤 때 본체가 그 기능 설정을 연다. 닫으면 숨고, 메뉴 "시작 안내"(본체가 붙임)나 `context.showGettingStarted()`로 다시 연다.
+- **메뉴**: `fillMenu`에는 주 동작(열기) → 고유 항목만. 본체가 끝에 "시작 안내", "<이름> 설정…"을 붙인다.
+
 ## 남은 일
 
 - [ ] Clocky, Floaty, Grabby 옮기기
@@ -95,4 +111,4 @@ Modules/<이름>/     기능 하나 (예: Modules/Keepy)
 - [ ] 공통 업데이트(AppUpdater) 붙이기: GitHub 저장소, 서명 키, dmg 만들기, release.sh
 - [ ] 기존 단독 앱의 데이터 가져오기(처음 켤 때 물어보고 복사)
 - [ ] 모든 기능의 단축키를 한 화면에서 보기, 겹침 알리기
-- [ ] git 저장소 만들기
+- [ ] Epp 자동 업데이트(공통 AppUpdater, 서명 키, dmg, release.sh). 저장소가 공개여야 동작한다

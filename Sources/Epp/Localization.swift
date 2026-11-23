@@ -44,6 +44,9 @@ enum Localization {
         // 설정
         ("Epp 설정", "Epp Settings"),
         ("일반", "General"),
+        ("설정 검색", "Search Settings"),
+        ("찾는 설정이 없어요", "No matching settings"),
+        ("시작 안내", "Getting Started"),
         ("기능", "Features"),
         ("꺼짐", "Off"),
         ("%@가 꺼져 있어요. 켜면 설정이 여기에 나와요.", "%@ is off. Turn it on to see its settings here."),
