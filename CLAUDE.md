@@ -136,6 +136,19 @@ Modules/<이름>/     기능 하나 (예: Modules/Keepy)
   옛 GUI 시험(Tests/GUI, gui-test.sh)과 업데이트·샌드박스 시험은 가져오지 않았다.
 - 영어 사전은 `ClockySettings.swift` 안 `enum Localization`(`"한국어": "English"` 꼴). **같은 키가 두 번 들어가면 실행 중에 죽는다.**
 
+## Grabby (Modules/Grabby) = 캡처
+
+원본: ../Grabby (커밋 ec8f086). 바뀐 점:
+- `AppDelegate` → `GrabbyModule`. 메뉴바 아이콘·시작 안내 창(WelcomeWindow)·업데이트·한 번만 실행은 뺐다. 메뉴는 Epp의 "캡처 ▸".
+- `AppPresence`(창이 열리면 일반 앱으로 바꾸기)를 뺐다. Dock·앱 메뉴는 Epp의 "Dock에 아이콘 보이기"를 따른다.
+- 앱 메뉴(파일: 캡처 창 열기·저장 ⌘S, 윈도우: 최소화 ⌘M 등)는 `mainMenus()`.
+- 테마는 캡처 창(탭 창 `LibraryWindow`, 띄운 캡처 `PinWindow`)에만(`GrabbyTheme`).
+- 저장은 `GrabbyStorage.defaults`·`folder`. 탭 보관함 `<Epp>/Grabby/Captures`, 띄운 캡처 `<Epp>/Grabby/Pins`.
+  `AppSettings.shared`는 `AppSettings!`라 `let settings: AppSettings = AppSettings.shared`처럼 타입을 적는다.
+- 동작 기록(`EventLog`)은 따로 파일을 쓰지 않고 `EppLog.write("캡처", …)`(진단 로그를 켰을 때만).
+- 화면 기록 권한이 없을 때 캡처하면 시스템에 묻고 `context.showGettingStarted()`로 캡처 설정(시작하기)을 연다. 권한 줄은 Epp 일반 → 권한.
+- 정보 탭의 보관함 크기·캡처 폴더 열기는 저장 탭으로 옮겼다. 점검은 업데이트·AppPresence 묶음을 뺐다.
+
 ## 화면 규칙 (모든 기능이 같게)
 
 - **기능 이름은 하는 일로**: 화면에는 앱 이름(Keepy, Peeky) 대신 기능 이름을 쓴다. `EppModuleInfo`의 `nameKo`/`nameEn`.
@@ -170,7 +183,7 @@ Modules/<이름>/     기능 하나 (예: Modules/Keepy)
 
 ## 남은 일
 
-- [ ] Grabby 옮기기
+- [ ] 캡처: 실제 캡처(화면 기록 권한 허용 뒤)·탭 창·띄운 캡처를 확인
 - [ ] 타이머: 남은 시간 메뉴바 항목, 캘린더 권한 묻기를 실제로 확인
 - [ ] 스티커: 앱 메뉴 합치기(⌘D·서식 등)와 알람 알림을 실제로 눌러 확인
 - [ ] Peeky를 실제로 켜서 확인(권한, 그룹 아이콘, 숨기기·정리, 끄고 켤 때 아이콘이 깨끗이 사라지는지)
