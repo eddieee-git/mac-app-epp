@@ -219,7 +219,7 @@ private struct DisabledModulePage: View {
 private struct GeneralPage: View {
     /// 설정 검색에서 이 쪽을 찾게 할 설정 이름들
     static var keywords: [String] {
-        [L("기능"), L("권한"), EppPermission.accessibility.title, EppPermission.screenRecording.title,
+        [L("기능"), L("모두 켜기"), L("권한"), EppPermission.accessibility.title, EppPermission.screenRecording.title,
          L("빠른 검색"), L("빠른 검색 열기"), L("로그인 시 실행"), L("Dock에 아이콘 보이기"), L("테마"), L("언어"),
          L("업데이트"), L("문제 해결"), L("진단 로그 남기기"), L("데이터 폴더"), L("설정 옮기기"), L("설정 내보내기…"), L("설정 가져오기…"), L("정보")]
     }
@@ -274,7 +274,17 @@ private struct GeneralPage: View {
                     }
                 }
             } header: {
-                Text(L("기능"))
+                HStack {
+                    Text(L("기능"))
+                    Spacer()
+                    if manager.soloID == nil {
+                        Button(manager.allEnabled ? L("모두 끄기") : L("모두 켜기")) {
+                            manager.setAllEnabled(!manager.allEnabled)
+                        }
+                        .buttonStyle(.link)
+                        .font(.callout)
+                    }
+                }
             } footer: {
                 Text(manager.soloID != nil
                      ? L("단독 실행 중이라 이 기능만 켜져 있어요.")

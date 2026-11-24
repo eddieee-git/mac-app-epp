@@ -64,6 +64,13 @@ final class ModuleManager: ObservableObject {
         onChange()
     }
 
+    /// 모든 기능을 한꺼번에 켜거나 끈다(일반 → 기능의 "모두 켜기"). 쪽은 넘어가지 않는다.
+    func setAllEnabled(_ on: Bool) {
+        for info in ModuleList.infos { setEnabled(info.id, on, showSettings: false) }
+    }
+
+    var allEnabled: Bool { ModuleList.infos.allSatisfy { isEnabled($0.id) } }
+
     func stopAll() {
         for module in running.values { module.stop() }
         running.removeAll()

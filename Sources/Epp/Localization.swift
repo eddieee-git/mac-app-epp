@@ -71,6 +71,8 @@ enum Localization {
         ("아래에서 쓸 기능을 켜세요. 여러 개를 한꺼번에 켜도 돼요. 켠 기능은 왼쪽 목록에 나오고, 처음 열면 시작하기가 하나씩 안내해요.",
          "Turn on the features you want below — as many as you like. Features you turn on appear in the list on the left, and Getting Started walks you through each one."),
         ("설정 열기", "Open Settings"),
+        ("모두 켜기", "Turn All On"),
+        ("모두 끄기", "Turn All Off"),
         ("%@ 설정과 시작하기를 열어요.", "Open %@ settings and Getting Started."),
         ("켠 기능만 실행돼요. 끈 기능은 아무 일도 하지 않고, 단축키도 등록하지 않아요.",
          "Only features you turn on run. Features that are off do nothing and register no shortcuts."),
