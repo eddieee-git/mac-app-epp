@@ -94,20 +94,14 @@ public final class PeekyModule: EppModule {
         Publishers.Merge(prefs.$assignments.map { _ in () }, prefs.$excludedIDs.map { _ in () })
             .dropFirst(2)
             .debounce(for: .seconds(1), scheduler: RunLoop.main)
-            .sink { [weak self] in
-                guard let self else { return }
-                guard self.prefs.hideInMenuBar else {
-                    // 「숨기기」를 골랐는데 메뉴바에서 빼기가 꺼져 있으면 아무 일도 없어 보였다. 처음 숨길 때 알아서 켠다.
-                    let hidesSome = ItemStore.shared.items.contains { !$0.isFixed && self.prefs.group(for: $0.id) != nil }
-                    if hidesSome {
-                        EppToast.show(L("메뉴바에서 빼는 중이에요 · 마우스가 잠깐 움직여요"), symbol: "menubar.rectangle")
-                        self.prefs.hideInMenuBar = true
-                    }
-                    return
-                }
-                self.arrangeMenuBar(collapseAfter: false)
-            }
+            .sink { [weak self] in self?.syncHidingWithChoices(arrange: true) }
             .store(in: &cancellables)
+
+        // 켤 때 이미 어긋나 있으면(모두 보이기인데 숨기기가 켜짐 등) 첫 훑기 뒤에 맞춘다.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 3) { [weak self] in
+            guard let self, self.isRunning else { return }
+            self.syncHidingWithChoices(arrange: false)
+        }
 
         let center = NSWorkspace.shared.notificationCenter
         for name in [NSWorkspace.didLaunchApplicationNotification, NSWorkspace.didTerminateApplicationNotification] {
@@ -368,6 +362,27 @@ public final class PeekyModule: EppModule {
         alert.addButton(withTitle: L("닫기"))
         NSApp.activate()
         if alert.runModal() == .alertFirstButtonReturn { resetIconPositions() }
+    }
+
+    /// 「숨기기」로 고른 아이콘이 있는지에 맞춰 "메뉴바에서 숨기기"를 켜고 끈다.
+    /// 예전에는 숨기기를 골라도 이 스위치를 따로 켜야 해서 아무 일도 없어 보였고, 모두 「보이기」로 돌려도 스위치가 켜진 채라
+    /// 구분선 왼쪽 아이콘이 계속 숨어 있었다.
+    private func syncHidingWithChoices(arrange: Bool) {
+        let items = ItemStore.shared.items
+        guard !items.isEmpty else { return }
+        let hidesSome = items.contains { !$0.isFixed && prefs.group(for: $0.id) != nil }
+        switch (prefs.hideInMenuBar, hidesSome) {
+        case (false, true):
+            EppToast.show(L("메뉴바에서 빼는 중이에요 · 마우스가 잠깐 움직여요"), symbol: "menubar.rectangle")
+            prefs.hideInMenuBar = true
+        case (true, false):
+            EppToast.show(L("숨긴 아이콘이 없어서 메뉴바의 아이콘을 모두 다시 보여 줘요"), symbol: "menubar.rectangle")
+            prefs.hideInMenuBar = false
+        case (true, true):
+            if arrange { arrangeMenuBar(collapseAfter: false) }
+        case (false, false):
+            break
+        }
     }
 
     // MARK: Groups → status items & hot keys

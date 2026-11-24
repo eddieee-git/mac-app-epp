@@ -204,7 +204,7 @@ struct PeekySettingsView: View {
         Section {
             Toggle(isOn: $prefs.hideInMenuBar) {
                 Text(L("「숨기기」 아이콘을 메뉴바에서 숨기기"))
-                Text(L("아이콘을 처음 「숨기기」로 고르면 저절로 켜져요. 정리하는 동안 마우스가 잠깐 움직여요. 끄면 숨긴 아이콘도 메뉴바에 다시 보여요."))
+                Text(L("아이콘을 「숨기기」로 고르면 저절로 켜지고, 모두 「보이기」로 돌리면 저절로 꺼져요. 정리하는 동안 마우스가 잠깐 움직여요."))
             }
         }
         Section {
