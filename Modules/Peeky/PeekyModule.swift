@@ -95,7 +95,16 @@ public final class PeekyModule: EppModule {
             .dropFirst(2)
             .debounce(for: .seconds(1), scheduler: RunLoop.main)
             .sink { [weak self] in
-                guard let self, self.prefs.hideInMenuBar else { return }
+                guard let self else { return }
+                guard self.prefs.hideInMenuBar else {
+                    // 「숨기기」를 골랐는데 메뉴바에서 빼기가 꺼져 있으면 아무 일도 없어 보였다. 처음 숨길 때 알아서 켠다.
+                    let hidesSome = ItemStore.shared.items.contains { !$0.isFixed && self.prefs.group(for: $0.id) != nil }
+                    if hidesSome {
+                        EppToast.show(L("메뉴바에서 빼는 중이에요 · 마우스가 잠깐 움직여요"), symbol: "menubar.rectangle")
+                        self.prefs.hideInMenuBar = true
+                    }
+                    return
+                }
                 self.arrangeMenuBar(collapseAfter: false)
             }
             .store(in: &cancellables)

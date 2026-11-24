@@ -112,6 +112,21 @@ final class ItemStore: ObservableObject {
 
     func image(for item: MenuBarItem) -> NSImage? { images[item.id] }
 
+    /// 설정 목록용: 찍은 아이콘의 빈 가장자리를 잘라 낸 것. 메뉴바 칸에는 여백이 많아 그대로 줄이면 아주 작게 보인다.
+    func trimmedImage(for item: MenuBarItem) -> NSImage? {
+        guard let image = images[item.id] else { return nil }
+        if let cached = trimmed[item.id], cached.source === image { return cached.image }
+        var result = image
+        if let cg = image.cgImage(forProposedRect: nil, context: nil, hints: nil), let cut = ImageTools.trimmed(cg) {
+            let scale = CGFloat(cg.width) / max(image.size.width, 1)
+            result = NSImage(cgImage: cut, size: NSSize(width: CGFloat(cut.width) / scale, height: CGFloat(cut.height) / scale))
+            result.isTemplate = image.isTemplate
+        }
+        trimmed[item.id] = (image, result)
+        return result
+    }
+    private var trimmed: [String: (source: NSImage, image: NSImage)] = [:]
+
     /// Probes ScreenCaptureKit. Only runs once the user has asked for the permission (or macOS already
     /// reports it), so Peeky never triggers the system prompt on its own.
     func checkScreenCapture() {
@@ -312,5 +327,29 @@ enum ImageTools {
             if spread > 0.18 { colored += 1 }
         }
         return Analysis(hasContent: opaque > 3, isMonochrome: opaque > 0 && Double(colored) / Double(opaque) < 0.08)
+    }
+
+    /// 보이는 픽셀만 남기고 둘레의 빈 곳을 잘라 낸다(가장자리 1픽셀 남김). 자를 게 없으면 nil.
+    static func trimmed(_ image: CGImage) -> CGImage? {
+        let w = image.width, h = image.height
+        guard w > 2, h > 2 else { return nil }
+        var pixels = [UInt8](repeating: 0, count: w * h * 4)
+        guard let ctx = CGContext(data: &pixels, width: w, height: h, bitsPerComponent: 8, bytesPerRow: w * 4,
+                                  space: CGColorSpaceCreateDeviceRGB(),
+                                  bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue) else { return nil }
+        ctx.draw(image, in: CGRect(x: 0, y: 0, width: w, height: h))
+        var minX = w, minY = h, maxX = -1, maxY = -1
+        for y in 0..<h {
+            for x in 0..<w where pixels[(y * w + x) * 4 + 3] > 24 {
+                minX = min(minX, x); maxX = max(maxX, x)
+                minY = min(minY, y); maxY = max(maxY, y)
+            }
+        }
+        guard maxX >= minX, maxY >= minY else { return nil }
+        let rect = CGRect(x: max(0, minX - 1), y: max(0, minY - 1),
+                          width: min(w, maxX + 2) - max(0, minX - 1), height: min(h, maxY + 2) - max(0, minY - 1))
+        guard rect.width < CGFloat(w) - 2 || rect.height < CGFloat(h) - 2 else { return nil }
+        // 비트맵 버퍼의 첫 줄이 그림의 맨 위 줄이라 cropping(위에서부터)과 좌표가 같다.
+        return image.cropping(to: rect)
     }
 }

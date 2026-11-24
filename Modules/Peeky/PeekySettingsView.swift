@@ -38,8 +38,7 @@ struct PeekyGettingStarted: View {
                   action: (L("권한 열기"), openPermissions)),
             .init(L("아이콘 탭에서 숨길 아이콘을 「숨기기」로 고르기"),
                   done: store.items.contains { !$0.isFixed && prefs.group(for: $0.id) != nil }),
-            .init(L("「숨기기」 아이콘을 메뉴바에서 숨기기 켜기"), done: prefs.hideInMenuBar),
-        ], footer: L("다 했으면 메뉴바의 바 아이콘을 눌러 보세요. 숨긴 아이콘이 바에 모여 있어요."))
+        ], footer: L("숨기기를 고르면 그 아이콘이 메뉴바에서 빠져요. 메뉴바의 그룹 아이콘을 누르면 숨긴 아이콘이 바에 모여 있어요."))
         .onReceive(poll) { _ in axTrusted = AX.isTrusted }
     }
 }
@@ -205,8 +204,13 @@ struct PeekySettingsView: View {
         Section {
             Toggle(isOn: $prefs.hideInMenuBar) {
                 Text(L("「숨기기」 아이콘을 메뉴바에서 숨기기"))
-                Text(L("켜면 Epp가 아이콘 자리를 옮겨 정리해요. 정리하는 동안 마우스가 잠깐 움직여요."))
+                Text(L("아이콘을 처음 「숨기기」로 고르면 저절로 켜져요. 정리하는 동안 마우스가 잠깐 움직여요. 끄면 숨긴 아이콘도 메뉴바에 다시 보여요."))
             }
+        }
+        Section {
+            Text(L("아이콘마다 오른쪽에서 고르세요. 「보이기」는 메뉴바에 그대로 두고, 「숨기기」는 메뉴바에서 빼서, 메뉴바의 그룹 아이콘을 누르면 열리는 바에 모아요."))
+                .font(.callout).foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
         }
         Section {
             // 목록을 거르는 검색. 창 전체 검색(왼쪽 위)과 따로, 이 목록 바로 위에 둔다.
@@ -324,7 +328,7 @@ struct PeekySettingsView: View {
     @ViewBuilder
     private func itemRowContent(_ item: MenuBarItem) -> some View {
         HStack(spacing: 10) {
-            itemIcon(item).frame(width: 34, height: 20)
+            itemIcon(item).frame(width: 40, height: 22)
             VStack(alignment: .leading, spacing: 1) {
                 Text(item.label).lineLimit(1)
                 if item.label != item.appName {
@@ -369,7 +373,7 @@ struct PeekySettingsView: View {
 
     @ViewBuilder
     private func itemIcon(_ item: MenuBarItem) -> some View {
-        if let image = store.image(for: item) {
+        if let image = store.trimmedImage(for: item) {
             Image(nsImage: image).resizable().renderingMode(image.isTemplate ? .template : .original)
                 .aspectRatio(contentMode: .fit)
         } else if let icon = item.appIcon {

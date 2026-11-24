@@ -1,3 +1,4 @@
+import CoreGraphics
 import CryptoKit
 import Foundation
 
@@ -51,7 +52,17 @@ enum SelfTest {
         let sorted = Preferences.ordered(["a", "b", "c", "d"], by: ["c", "a"]) { $0 }
         expect(sorted == ["c", "a", "b", "d"], "저장한 순서 먼저, 나머지는 원래 순서")
 
-        print("그룹 설정")
+        print("아이콘 여백 자르기")
+        let canvas = CGContext(data: nil, width: 40, height: 20, bitsPerComponent: 8, bytesPerRow: 0,
+                               space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)!
+        canvas.setFillColor(CGColor(red: 0, green: 0, blue: 0, alpha: 1))
+        canvas.fill(CGRect(x: 10, y: 12, width: 6, height: 4)) // 그림 좌표: 아래에서 12 → 위에서 4
+        let cut = canvas.makeImage().flatMap(ImageTools.trimmed)
+        expect(cut?.width == 8 && cut?.height == 6, "보이는 부분만 남김(가장자리 1픽셀)")
+        let probe = cut.flatMap { ImageTools.analyze($0) }
+        expect(probe?.hasContent == true, "잘라 낸 자리에 그림이 있음(위아래가 뒤집히지 않음)")
+
+                print("그룹 설정")
         let suite = "peeky-selftest-\(UUID().uuidString)"
         let defaults = UserDefaults(suiteName: suite)!
         defer { defaults.removePersistentDomain(forName: suite) }
