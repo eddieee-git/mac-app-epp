@@ -87,7 +87,10 @@ public final class PeekyModule: EppModule {
             .dropFirst()
             .sink { [weak self] enabled in
                 self?.hider.setEnabled(enabled, collapseNow: false)
-                if enabled { self?.arrangeMenuBar(collapseAfter: true) }
+                // 새로 만든 구분선·버튼이 메뉴바에 자리 잡을 때까지 조금 기다렸다가 옮긴다.
+                if enabled {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) { self?.arrangeMenuBar(collapseAfter: true) }
+                }
             }
             .store(in: &cancellables)
         // 아이콘마다 「보이기 / 숨기기」를 바꾸면 잠시 뒤 한 번에 다시 정리한다.
@@ -241,13 +244,13 @@ public final class PeekyModule: EppModule {
             return NSEvent.pressedMouseButtons != 0 || hypot(now.x - pointer.x, now.y - pointer.y) > 3
                 || !hider.menuBarIsVisible || !isRunning
         }
-        func finish(interrupted: Bool) {
+        func finish(interrupted: Bool, retryAfter delay: TimeInterval = 10) {
             isArranging = false
             ItemStore.shared.unmovableIDs = unmovable
             ItemStore.log("arrange: moved \(moved), unmovable \(unmovable.count), interrupted \(interrupted)")
             guard isRunning else { return }
             if collapseAfter || wasCollapsed { hider.collapse() }
-            if interrupted { retryArrangeLater(collapseAfter: collapseAfter) } else { arrangeRetries = 0 }
+            if interrupted { retryArrangeLater(collapseAfter: collapseAfter, after: delay) } else { arrangeRetries = 0 }
         }
         var firstScan = true
         func step(recheckedMissing: Bool = false) {
@@ -257,7 +260,8 @@ public final class PeekyModule: EppModule {
             ItemStore.shared.refresh(full: full) { [self] in
                 if userIsBusy() { finish(interrupted: true); return }
                 let items = ItemStore.shared.items
-                guard let divider = hider.dividerFrame, let toggle = hider.toggleFrame else { finish(interrupted: false); return }
+                // 방금 만든 구분선·버튼은 자리가 잡히기 전이라 프레임이 없을 수 있다. 그냥 끝내면 첫 숨기기가 안 옮겨졌다(잠시 뒤 다시).
+                guard let divider = hider.dividerFrame, let toggle = hider.toggleFrame else { finish(interrupted: true, retryAfter: 1); return }
                 if let last = pending {
                     guard let item = items.first(where: { $0.id == last.id }) else {
                         // 한 번 못 읽었을 수도 있으니 잠깐 뒤 다시 본다.
@@ -312,10 +316,10 @@ public final class PeekyModule: EppModule {
     }
 
     /// 사용자가 마우스를 쓰고 있었거나 메뉴바가 가려져 있었으면 조금 뒤 다시 한다(몇 번까지만).
-    private func retryArrangeLater(collapseAfter: Bool) {
+    private func retryArrangeLater(collapseAfter: Bool, after delay: TimeInterval = 10) {
         guard arrangeRetries < 6 else { arrangeRetries = 0; return }
         arrangeRetries += 1
-        DispatchQueue.main.asyncAfter(deadline: .now() + 10) { [weak self] in
+        DispatchQueue.main.asyncAfter(deadline: .now() + delay) { [weak self] in
             MainActor.assumeIsolated {
                 guard let self, self.isRunning, self.prefs.hideInMenuBar else { return }
                 self.arrangeMenuBar(collapseAfter: collapseAfter)
