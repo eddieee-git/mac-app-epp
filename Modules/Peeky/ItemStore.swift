@@ -95,6 +95,7 @@ final class ItemStore: ObservableObject {
             let found = Self.scan(apps)
             DispatchQueue.main.async {
                 self.items = found
+                self.lastScan = Date()
                 self.knownPIDs = Set(found.map(\.pid))
                 if scanAll, !found.isEmpty { Preferences.shared.adoptVisibleDefault(knownIDs: found.map(\.id)) }
                 self.isScanning = false
@@ -219,8 +220,15 @@ final class ItemStore: ObservableObject {
 
     /// 메뉴바에서 숨기기 직전에 부른다. 숨긴 항목은 화면 밖으로 나가 캡처할 수 없으니,
     /// 아직 보일 때 항목을 다시 읽고 이미지가 없는 것을 캡처해 둔다.
+    /// 마지막으로 아이콘을 다 읽은 때. 방금 읽었으면 숨기기 전에 또 읽지 않는다(두 번째 숨기기부터 늦던 까닭).
+    private var lastScan = Date.distantPast
+
     func prepareForHiding(completion: @escaping () -> Void) {
         guard screenCaptureOK, AX.isTrusted else { completion(); return }
+        if Date().timeIntervalSince(lastScan) < 2 {
+            captureImages(only: nil, completion: completion)
+            return
+        }
         refresh(captureIDs: []) { [weak self] in
             guard let self else { completion(); return }
             self.captureImages(only: nil) {

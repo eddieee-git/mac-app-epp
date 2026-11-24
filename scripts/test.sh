@@ -42,8 +42,9 @@ swift build
 
 # 타이머의 단위 시험(Swift Testing). Xcode 없이 Command Line Tools에 든 Swift Testing을 쓰는데,
 # swift test가 그 위치를 스스로 찾지 못하므로 경로를 알려 준다. 시험은 따로 빌드한다(.build/tests).
+# 시험 몇 개가 언어(EppLanguage.isKorean)를 바꿔 보므로 한 번에 하나씩 돌린다(같이 돌리면 드물게 죽었다).
 dev=/Library/Developer/CommandLineTools/Library/Developer
-swift test --scratch-path .build/tests \
+swift test --scratch-path .build/tests --no-parallel \
     -Xswiftc -target -Xswiftc arm64-apple-macosx14.0 \
     -Xswiftc -F -Xswiftc $dev/Frameworks \
     -Xlinker -rpath -Xlinker $dev/Frameworks \

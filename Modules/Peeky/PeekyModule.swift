@@ -293,8 +293,8 @@ public final class PeekyModule: EppModule {
                 }
             }
         }
-        // 펼친 뒤 메뉴바가 자리를 잡을 시간을 준다.
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) { MainActor.assumeIsolated { step() } }
+        // 펼친 뒤 메뉴바가 자리를 잡을 시간을 준다(접혀 있지 않았으면 조금만).
+        DispatchQueue.main.asyncAfter(deadline: .now() + (wasCollapsed ? 0.4 : 0.15)) { MainActor.assumeIsolated { step() } }
     }
 
     /// 「보이기」 아이콘 하나를 시계·제어 센터 바로 왼쪽으로 옮긴다. macOS는 자리가 모자라면 왼쪽부터 숨기므로
