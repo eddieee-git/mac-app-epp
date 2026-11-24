@@ -28,6 +28,8 @@ public final class PeekyModule: EppModule {
     private var cancellables = Set<AnyCancellable>()
     private var observers: [NSObjectProtocol] = []
     private var isArranging = false
+    /// 옮기는 중에 또 바뀌었으면 끝난 뒤 한 번 더 옮긴다.
+    private var arrangeAgain = false
     private var arrangeRetries = 0
     /// 기능을 끈 뒤에는 늦게 도착한 일(정리 다시 하기 등)을 하지 않는다.
     private var isRunning = false
@@ -225,12 +227,23 @@ public final class PeekyModule: EppModule {
     /// - 옮긴 아이콘이 메뉴바에서 사라졌으면 멈추고 알린다.
     /// - 노치 뒤라 잡을 수 없거나 옮겨지지 않은 아이콘은 「옮기지 못함」으로 표시한다.
     private func arrangeMenuBar(collapseAfter: Bool) {
-        guard isRunning, hider.isEnabled, AX.isTrusted, !isArranging else { return }
-        guard NSEvent.pressedMouseButtons == 0, hider.menuBarIsVisible else {
-            // 방금 만든 버튼은 화면에 보이기까지 잠깐 걸린다. 처음 몇 번은 1초 뒤에 바로 다시 본다(예전엔 10초 뒤라 한참 걸렸다).
-            retryArrangeLater(collapseAfter: collapseAfter, after: arrangeRetries < 3 ? 1 : 10)
+        guard isRunning, hider.isEnabled, AX.isTrusted else { return }
+        // 옮기는 중에 또 바꾸면 예전에는 그냥 넘어가서, 다음 계기가 올 때까지 한참 안 움직였다. 끝난 뒤 한 번 더 한다.
+        guard !isArranging else {
+            arrangeAgain = true
+            ItemStore.log("arrange: busy, will run again after this pass")
             return
         }
+        guard NSEvent.pressedMouseButtons == 0, hider.menuBarIsVisible else {
+            // 방금 만든 버튼은 화면에 보이기까지 잠깐 걸린다. 처음 몇 번은 1초 뒤에 바로 다시 본다(예전엔 10초 뒤라 한참 걸렸다).
+            let delay: TimeInterval = arrangeRetries < 3 ? 1 : 10
+            ItemStore.log("arrange: wait (\(NSEvent.pressedMouseButtons != 0 ? "mouse pressed" : "menu bar not visible")), retry \(arrangeRetries + 1) in \(Int(delay))s")
+            retryArrangeLater(collapseAfter: collapseAfter, after: delay)
+            return
+        }
+        let started = Date()
+        func elapsed() -> String { String(format: "%.2fs", Date().timeIntervalSince(started)) }
+        ItemStore.log("arrange: start (collapsed=\(hider.isCollapsed), collapseAfter=\(collapseAfter))")
         isArranging = true
         let wasCollapsed = hider.isCollapsed
         hider.expand()
@@ -248,8 +261,15 @@ public final class PeekyModule: EppModule {
         func finish(interrupted: Bool, retryAfter delay: TimeInterval = 10) {
             isArranging = false
             ItemStore.shared.unmovableIDs = unmovable
-            ItemStore.log("arrange: moved \(moved), unmovable \(unmovable.count), interrupted \(interrupted)")
+            ItemStore.log("arrange: done in \(elapsed()), moved \(moved), unmovable \(unmovable.count), interrupted \(interrupted)")
             guard isRunning else { return }
+            if arrangeAgain, !interrupted {
+                // 펼친 채로 바로 한 번 더(접었다 펴면 두 번 깜빡인다). 끝나면 원래대로 접는다.
+                arrangeAgain = false
+                let collapse = collapseAfter || wasCollapsed
+                DispatchQueue.main.async { [weak self] in self?.arrangeMenuBar(collapseAfter: collapse) }
+                return
+            }
             if collapseAfter || wasCollapsed { hider.collapse() }
             if interrupted { retryArrangeLater(collapseAfter: collapseAfter, after: delay) } else { arrangeRetries = 0 }
         }
@@ -259,11 +279,18 @@ public final class PeekyModule: EppModule {
             // 처음 한 번만 모든 앱을 훑고, 그다음부터는 아이콘이 있는 앱만 다시 읽는다(빠르다).
             let full = firstScan
             firstScan = false
+            let scanStart = Date()
             ItemStore.shared.refresh(full: full) { [self] in
-                if userIsBusy() { finish(interrupted: true); return }
+                ItemStore.log(String(format: "arrange: read icons (%@) in %.2fs, at %@", full ? "all apps" : "icon apps",
+                                     Date().timeIntervalSince(scanStart), elapsed()))
+                if userIsBusy() { ItemStore.log("arrange: stopped, mouse used"); finish(interrupted: true); return }
                 let items = ItemStore.shared.items
                 // 방금 만든 구분선·버튼은 자리가 잡히기 전이라 프레임이 없을 수 있다. 그냥 끝내면 첫 숨기기가 안 옮겨졌다(잠시 뒤 다시).
-                guard let divider = hider.dividerFrame, let toggle = hider.toggleFrame else { finish(interrupted: true, retryAfter: 1); return }
+                guard let divider = hider.dividerFrame, let toggle = hider.toggleFrame else {
+                    ItemStore.log("arrange: divider not placed yet, retry in 1s")
+                    finish(interrupted: true, retryAfter: 1)
+                    return
+                }
                 if let last = pending {
                     guard let item = items.first(where: { $0.id == last.id }) else {
                         // 한 번 못 읽었을 수도 있으니 잠깐 뒤 다시 본다.
@@ -286,6 +313,7 @@ public final class PeekyModule: EppModule {
                 guard let (item, move) = plan.move else { finish(interrupted: false); return }
                 tried.insert(item.id)
                 moved += 1
+                ItemStore.log("arrange: move \(move.from.midX < divider.midX ? "show" : "hide") at \(elapsed())")
                 pending = (item.id, item.displayName, move.from.midX < divider.midX)
                 ItemMover.perform([move]) {
                     MainActor.assumeIsolated { pointer = NSEvent.mouseLocation }

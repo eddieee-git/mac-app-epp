@@ -225,8 +225,12 @@ final class ItemStore: ObservableObject {
 
     func prepareForHiding(completion: @escaping () -> Void) {
         guard screenCaptureOK, AX.isTrusted else { completion(); return }
+        let started = Date()
         if Date().timeIntervalSince(lastScan) < 2 {
-            captureImages(only: nil, completion: completion)
+            captureImages(only: nil) {
+                Self.log(String(format: "hide: ready in %.2fs (no rescan)", Date().timeIntervalSince(started)))
+                completion()
+            }
             return
         }
         refresh(captureIDs: []) { [weak self] in
