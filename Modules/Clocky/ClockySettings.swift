@@ -51,6 +51,8 @@ final class ClockySettings: ObservableObject {
     @Published var menuBarShowsAlarm: Bool { didSet { defaults.set(menuBarShowsAlarm, forKey: Keys.menuBarAlarm) } }
     /// 남은 시간을 Epp 아이콘 옆이 아니라 따로 메뉴바 항목으로 보일지(기본 끔: 아이콘을 늘리지 않는다)
     @Published var menuBarSeparateItem: Bool { didSet { defaults.set(menuBarSeparateItem, forKey: "menuBarSeparateItem") } }
+    /// 시계 창을 접어 작은 막대(이름·남은 시간·버튼 하나)로 보일지
+    @Published var clockCompact: Bool { didSet { defaults.set(clockCompact, forKey: "clockCompact") } }
     /// 지우기 전에 묻는다. 꺼 두어도 ⌘Z로 되살릴 수 있다.
     @Published var confirmDelete: Bool { didSet { defaults.set(confirmDelete, forKey: Keys.confirmDelete) } }
     /// 타이머 시간 버튼(분). 1~6개.
@@ -93,6 +95,7 @@ final class ClockySettings: ObservableObject {
         menuBarShowsTimer = defaults.object(forKey: Keys.menuBarTimer) as? Bool ?? true
         menuBarShowsAlarm = defaults.object(forKey: Keys.menuBarAlarm) as? Bool ?? true
         menuBarSeparateItem = defaults.bool(forKey: "menuBarSeparateItem")
+        clockCompact = defaults.bool(forKey: "clockCompact")
         confirmDelete = defaults.bool(forKey: Keys.confirmDelete)
         timerPresets = (defaults.array(forKey: Keys.presets) as? [Int]).flatMap { Self.validPresets($0) } ?? Self.defaultPresets
         calendarFeeds = defaults.data(forKey: Keys.calendarFeeds)
@@ -247,6 +250,8 @@ enum Localization {
     static var duplicateKeys: [String] { translations.duplicateKeys }
 
     static let pairs: [(String, String)] = [
+        ("접기", "Collapse"),
+        ("펼치기", "Expand"),
         ("%@ 타이머 시작", "Start %@ Timer"),
         ("시계", "Clock"),
         // Epp

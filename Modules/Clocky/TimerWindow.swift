@@ -5,6 +5,9 @@ import SwiftUI
 
 final class TimerWindowController: NSObject, NSWindowDelegate {
     static let contentSize = NSSize(width: 340, height: 420)
+    /// 접은 시계 창(이름·남은 시간 한 줄)
+    static let compactSize = NSSize(width: 260, height: 56)
+    private var currentSize: NSSize { settings.clockCompact ? Self.compactSize : Self.contentSize }
 
     let store = ClockStore(defaults: ClockyStorage.defaults)
     private let settings: ClockySettings
@@ -33,11 +36,27 @@ final class TimerWindowController: NSObject, NSWindowDelegate {
         settings.$menuBarShowsAlarm.sink { [weak self] in self?.store.tracksMenuBarAlarm = $0 }.store(in: &settingSubscriptions)
         settings.$keepMacAwake.sink { [weak self] in self?.store.keepsMacAwake = $0 }.store(in: &settingSubscriptions)
         settings.$timerPresets.sink { [weak self] in self?.store.presets = $0 }.store(in: &settingSubscriptions)
+        // 접고 펼 때 창 위쪽 자리를 그대로 두고 크기만 바꾼다.
+        settings.$clockCompact.dropFirst().removeDuplicates().sink { [weak self] compact in
+            DispatchQueue.main.async { self?.resize(compact: compact) }
+        }.store(in: &settingSubscriptions)
         // 타이머를 띄워 둔 모니터를 빼면 남은 화면으로 옮긴다.
         NotificationCenter.default.addObserver(forName: NSApplication.didChangeScreenParametersNotification,
                                                object: nil, queue: .main) { [weak self] _ in
             self?.ensureOnScreen()
         }
+    }
+
+    private func resize(compact: Bool) {
+        guard isLoaded else { return }
+        let size = compact ? Self.compactSize : Self.contentSize
+        let old = panel.frame
+        var frame = NSRect(x: old.minX, y: old.maxY - size.height, width: size.width, height: size.height)
+        // 펼칠 때 화면 아래로 나가면 위로 올린다.
+        if let screen = (panel.screen ?? NSScreen.main)?.visibleFrame, frame.minY < screen.minY {
+            frame.origin.y = screen.minY
+        }
+        panel.setFrame(frame, display: true, animate: !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion)
     }
 
     var isVisible: Bool { isLoaded && panel.isVisible }
@@ -104,7 +123,7 @@ final class TimerWindowController: NSObject, NSWindowDelegate {
 
     private func makePanel() -> TimerPanel {
         isLoaded = true
-        let panel = TimerPanel(contentRect: NSRect(origin: .zero, size: Self.contentSize),
+        let panel = TimerPanel(contentRect: NSRect(origin: .zero, size: currentSize),
                                styleMask: [.titled, .closable, .fullSizeContentView, .nonactivatingPanel],
                                backing: .buffered, defer: false)
         panel.titleVisibility = .hidden
@@ -123,7 +142,7 @@ final class TimerWindowController: NSObject, NSWindowDelegate {
         // 내용에 따라 창 크기가 바뀌지 않게 한다. 제목 표시줄까지 내용이 덮으므로 창 전체 크기를 정한다.
         hosting.sizingOptions = []
         panel.contentView = hosting
-        panel.setFrame(NSRect(origin: .zero, size: Self.contentSize), display: false)
+        panel.setFrame(NSRect(origin: .zero, size: currentSize), display: false)
         panel.store = store
         panel.settings = settings
         panel.delegate = self

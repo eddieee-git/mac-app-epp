@@ -99,6 +99,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, UNUser
         if let text = UserDefaults.standard.string(forKey: "debugQuickSearch") {
             DispatchQueue.main.asyncAfter(deadline: .now() + 1) { self.quickSearch.show(query: text) }
         }
+        // -debugURL "epp://clocky/show" : 주소로 연 것처럼 기능 명령을 실행한다(시험용 Epp Dev는 epp:// 주소를 받지 않으므로).
+        if let link = UserDefaults.standard.string(forKey: "debugURL"), let url = URL(string: link) {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1) { self.application(NSApp, open: [url]) }
+        }
         // -debugCryptoCheck <account> : 그 이름으로 키를 만들어 암호화·풀기를 해 보고 결과를 출력한다(키는 남겨 둠 — 확인 뒤 지운다).
         if let account = UserDefaults.standard.string(forKey: "debugCryptoCheck") {
             let crypto = EppCrypto(account: account)

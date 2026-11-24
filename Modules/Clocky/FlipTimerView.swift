@@ -38,6 +38,76 @@ struct FlipTimerView: View {
     }
 
     var body: some View {
+        if settings.clockCompact {
+            compactBody
+        } else {
+            fullBody
+        }
+    }
+
+    /// 접은 모양: 한 줄에 이름 · 남은 시간(또는 지금 시각) · 버튼 하나 · 펼치기.
+    private var compactBody: some View {
+        HStack(spacing: 8) {
+            Color.clear.frame(width: 18, height: 1)   // 닫기 버튼 자리
+            VStack(alignment: .leading, spacing: 0) {
+                Text(store.isRinging ? store.ringingTitles.joined(separator: ", ") : compactTitle)
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                Text(compactTime)
+                    .font(.system(size: 22, weight: .bold, design: .rounded))
+                    .monospacedDigit()
+                    .accessibilityLabel(boardSpeech)
+            }
+            Spacer(minLength: 4)
+            compactControl
+            Button { settings.clockCompact = false } label: { Image(systemName: "chevron.down") }
+                .buttonStyle(.borderless)
+                .help(L("펼치기"))
+                .accessibilityLabel(L("펼치기"))
+        }
+        .padding(.horizontal, 12)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .ignoresSafeArea()
+        .background(Color.red.opacity(backgroundAlert))
+        .animation(reduceMotion ? nil : .easeInOut(duration: 0.15), value: backgroundAlert)
+        .environment(\.controlActiveState, .key)
+        .environment(\.locale, settings.locale)
+    }
+
+    private var compactTitle: String {
+        switch store.mode {
+        case .timer: return store.displayName(of: store.selectedTimer)
+        case .alarm: return store.selectedAlarm.map { store.displayName(of: $0) } ?? L("알람")
+        }
+    }
+
+    /// 01:23:45, 시간이 0이면 23:45
+    private var compactTime: String {
+        let u = store.displayedUnits
+        return u[0] > 0 || store.mode == .alarm ? String(format: "%02d:%02d:%02d", u[0], u[1], u[2])
+            : String(format: "%02d:%02d", u[1], u[2])
+    }
+
+    @ViewBuilder
+    private var compactControl: some View {
+        if store.isRinging {
+            Button(L("끄기")) { store.stopRinging() }
+                .controlSize(.small)
+        } else if store.mode == .timer {
+            let item = store.selectedTimer
+            Button {
+                item.phase == .running ? store.pause(item.id) : store.start(item.id)
+            } label: {
+                Image(systemName: item.phase == .running ? "pause.fill" : "play.fill")
+            }
+            .buttonStyle(.borderless)
+            .help(item.phase == .running ? L("일시정지") : L("시작"))
+            .accessibilityLabel(item.phase == .running ? L("일시정지") : L("시작"))
+        }
+    }
+
+    private var fullBody: some View {
         VStack(spacing: 8) {
             // 닫기 버튼과 같은 줄. 양쪽 폭을 맞춰 이름이 가운데 오게 한다.
             HStack(spacing: 0) {
@@ -49,15 +119,21 @@ struct FlipTimerView: View {
                     .disabled(store.mode == .alarm && store.selectedAlarm == nil)
                     // 고른 항목이 바뀌면 칸을 새로 만들어, 고치던 글자가 다른 항목에 들어가지 않게 한다.
                     .id(selectionKey)
-                Button {
-                    store.isPinned.toggle()
-                } label: {
-                    Image(systemName: store.isPinned ? "pin.fill" : "pin")
+                HStack(spacing: 6) {
+                    Button {
+                        store.isPinned.toggle()
+                    } label: {
+                        Image(systemName: store.isPinned ? "pin.fill" : "pin")
+                    }
+                    .buttonStyle(.borderless)
+                    .help(store.isPinned ? L("항상 위 해제") : L("항상 위"))
+                    .accessibilityLabel(L("항상 위"))
+                    .accessibilityValue(store.isPinned ? L("켜짐") : L("꺼짐"))
+                    Button { settings.clockCompact = true } label: { Image(systemName: "chevron.up") }
+                        .buttonStyle(.borderless)
+                        .help(L("접기"))
+                        .accessibilityLabel(L("접기"))
                 }
-                .buttonStyle(.borderless)
-                .help(store.isPinned ? L("항상 위 해제") : L("항상 위"))
-                .accessibilityLabel(L("항상 위"))
-                .accessibilityValue(store.isPinned ? L("켜짐") : L("꺼짐"))
                 .frame(width: 44, alignment: .trailing)
             }
             .frame(height: 22)
