@@ -96,8 +96,9 @@ public final class PeekyModule: EppModule {
             }
             .store(in: &cancellables)
         // 아이콘마다 「보이기 / 숨기기」를 바꾸면 잠시 뒤 한 번에 다시 정리한다.
-        Publishers.Merge(prefs.$assignments.map { _ in () }, prefs.$excludedIDs.map { _ in () })
-            .dropFirst(2)
+        Publishers.Merge3(prefs.$assignments.map { _ in () }, prefs.$excludedIDs.map { _ in () },
+                          prefs.$hiddenOnlyIDs.map { _ in () })
+            .dropFirst(3)
             .debounce(for: .seconds(0.3), scheduler: RunLoop.main)
             .sink { [weak self] in self?.syncHidingWithChoices(arrange: true) }
             .store(in: &cancellables)
@@ -407,7 +408,7 @@ public final class PeekyModule: EppModule {
             } else if !NotchGeometry.isOffScreen(frame) {
                 continue   // 다른 화면의 메뉴바에 있는 아이콘
             }
-            let wantsHidden = prefs.group(for: item.id) != nil
+            let wantsHidden = prefs.wantsHidden(item.id)
             let isLeft = frame.midX < divider.midX
             guard wantsHidden != isLeft else { continue }
             if NotchGeometry.isHidden(frame) { blocked.insert(item.id); continue }
@@ -441,7 +442,7 @@ public final class PeekyModule: EppModule {
     private func syncHidingWithChoices(arrange: Bool) {
         let items = ItemStore.shared.items
         guard !items.isEmpty else { return }
-        let hidesSome = items.contains { !$0.isFixed && prefs.group(for: $0.id) != nil }
+        let hidesSome = items.contains { !$0.isFixed && prefs.wantsHidden($0.id) }
         switch (prefs.hideInMenuBar, hidesSome) {
         case (false, true):
             EppToast.show(L("메뉴바에서 빼는 중이에요 · 마우스가 잠깐 움직여요"), symbol: "menubar.rectangle")

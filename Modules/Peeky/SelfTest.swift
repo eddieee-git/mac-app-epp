@@ -83,6 +83,17 @@ enum SelfTest {
         expect(prefs.groups.count == 1 && prefs.group(for: "item.a") == first, "지운 그룹의 아이콘은 첫 그룹으로")
         prefs.removeGroup(prefs.groups[0].id)
         expect(prefs.groups.count == 1, "마지막 그룹은 지우지 않음")
+        print("보이기 · 그룹 · 숨기기")
+        prefs.setPlacement(.hide, for: "item.c")
+        expect(prefs.placement(for: "item.c") == .hide && prefs.group(for: "item.c") == nil && prefs.wantsHidden("item.c"),
+               "숨기기: 메뉴바에서 빼지만 그룹 바에는 없음")
+        prefs.setPlacement(.group(prefs.groups[0].id), for: "item.c")
+        expect(prefs.placement(for: "item.c") == .group(prefs.groups[0].id) && prefs.wantsHidden("item.c"), "그룹: 메뉴바에서 빼고 그룹 바에")
+        prefs.setPlacement(.show, for: "item.c")
+        expect(prefs.placement(for: "item.c") == .show && !prefs.wantsHidden("item.c"), "보이기: 메뉴바에 그대로")
+        prefs.setPlacement(.hide, for: "item.c")
+        expect(Preferences(defaults: defaults).placement(for: "item.c") == .hide, "숨기기도 저장")
+
         prefs.rowCount = 9
         expect(prefs.rowCount(for: nil) == 3, "줄 수는 3까지")
 

@@ -36,9 +36,9 @@ struct PeekyGettingStarted: View {
         EppStepList([
             .init(L("손쉬운 사용 권한 허용하기 (Epp 설정 → 일반 → 권한)"), done: axTrusted,
                   action: (L("권한 열기"), openPermissions)),
-            .init(L("아이콘 탭에서 숨길 아이콘을 「숨기기」로 고르기"),
-                  done: store.items.contains { !$0.isFixed && prefs.group(for: $0.id) != nil }),
-        ], footer: L("숨기기를 고르면 그 아이콘이 메뉴바에서 빠져요. 메뉴바의 그룹 아이콘을 누르면 숨긴 아이콘이 바에 모여 있어요."))
+            .init(L("아이콘 탭에서 아이콘을 「그룹」이나 「숨기기」로 고르기"),
+                  done: store.items.contains { !$0.isFixed && prefs.wantsHidden($0.id) }),
+        ], footer: L("「그룹」과 「숨기기」를 고르면 메뉴바에서 빠져요. 「그룹」은 메뉴바의 그룹 아이콘(<>)을 누르면 바에 모여 있고, 「숨기기」는 ‹ › 버튼을 누르면 잠깐 보여요."))
         .onReceive(poll) { _ in axTrusted = AX.isTrusted }
     }
 }
@@ -204,11 +204,11 @@ struct PeekySettingsView: View {
         Section {
             Toggle(isOn: $prefs.hideInMenuBar) {
                 Text(L("「숨기기」 아이콘을 메뉴바에서 숨기기"))
-                Text(L("아이콘을 「숨기기」로 고르면 저절로 켜지고, 모두 「보이기」로 돌리면 저절로 꺼져요. 정리하는 동안 마우스가 잠깐 움직여요."))
+                Text(L("아이콘을 「그룹」이나 「숨기기」로 고르면 저절로 켜지고, 모두 「보이기」로 돌리면 저절로 꺼져요. 정리하는 동안 마우스가 잠깐 움직여요."))
             }
         }
         Section {
-            Text(L("아이콘마다 오른쪽에서 고르세요. 「보이기」는 메뉴바에 그대로 두고, 「숨기기」는 메뉴바에서 빼서, 메뉴바의 그룹 아이콘을 누르면 열리는 바에 모아요."))
+            Text(L("아이콘마다 오른쪽에서 고르세요. 「보이기」는 메뉴바에 그대로, 「그룹」은 메뉴바에서 빼서 그룹 아이콘(<>)을 누르면 열리는 바에 모아요. 「숨기기」는 메뉴바에서 빼기만 해요(‹ › 버튼을 누르면 보여요)."))
                 .font(.callout).foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
         }
@@ -235,11 +235,14 @@ struct PeekySettingsView: View {
                 Text(L("메뉴바 아이콘"))
                 Spacer()
                 Menu(L("모두")) {
-                    Button(L("모두 보이기")) { filteredItems.forEach { prefs.assign($0.id, to: nil) } }
+                    Button(L("모두 보이기")) { filteredItems.forEach { prefs.setPlacement(.show, for: $0.id) } }
                     ForEach(prefs.groups) { group in
-                        Button(prefs.groups.count == 1 ? L("모두 숨기기") : L("모두 숨기기 · %@", group.name)) {
-                            filteredItems.filter { !$0.isFixed }.forEach { prefs.assign($0.id, to: group.id) }
+                        Button(prefs.groups.count == 1 ? L("모두 그룹에") : L("모두 그룹에 · %@", group.name)) {
+                            filteredItems.filter { !$0.isFixed }.forEach { prefs.setPlacement(.group(group.id), for: $0.id) }
                         }
+                    }
+                    Button(L("모두 숨기기")) {
+                        filteredItems.filter { !$0.isFixed }.forEach { prefs.setPlacement(.hide, for: $0.id) }
                     }
                 }
                 .fixedSize()
@@ -319,7 +322,7 @@ struct PeekySettingsView: View {
     private func itemRow(_ item: MenuBarItem) -> some View {
         itemRowContent(item)
             .contextMenu {
-                if !item.isFixed, prefs.group(for: item.id) == nil {
+                if !item.isFixed, prefs.placement(for: item.id) == .show {
                     Button(L("맨 오른쪽으로 옮기기 (가장 오래 보이게)")) { StatusIconCheck.bringToFront(item.id) }
                 }
             }
@@ -355,14 +358,15 @@ struct PeekySettingsView: View {
         }
     }
 
-    /// 아이콘마다 「보이기」 또는 「숨기기(· 그룹)」
+    /// 아이콘마다 「보이기」 / 「그룹(· 이름)」 / 「숨기기」
     private func placementPicker(_ item: MenuBarItem) -> some View {
-        Picker("", selection: Binding(get: { prefs.group(for: item.id) },
-                                      set: { prefs.assign(item.id, to: $0) })) {
-            Text(L("보이기")).tag(UUID?.none)
+        Picker("", selection: Binding(get: { prefs.placement(for: item.id) },
+                                      set: { prefs.setPlacement($0, for: item.id) })) {
+            Text(L("보이기")).tag(Preferences.Placement.show)
             ForEach(prefs.groups) { group in
-                Text(prefs.groups.count == 1 ? L("숨기기") : L("숨기기 · %@", group.name)).tag(Optional(group.id))
+                Text(prefs.groups.count == 1 ? L("그룹") : L("그룹 · %@", group.name)).tag(Preferences.Placement.group(group.id))
             }
+            Text(L("숨기기")).tag(Preferences.Placement.hide)
         }
         .labelsHidden()
     }

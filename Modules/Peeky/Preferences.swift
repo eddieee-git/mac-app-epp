@@ -65,6 +65,11 @@ final class Preferences: ObservableObject {
         didSet { defaults.set(Array(excludedIDs), forKey: "excludedIDs") }
     }
 
+    /// 그룹 바에는 넣지 않고 ‹ › 왼쪽으로 숨기기만 하는 아이콘(「숨기기」).
+    @Published var hiddenOnlyIDs: Set<String> {
+        didSet { defaults.set(Array(hiddenOnlyIDs), forKey: "hiddenOnlyIDs") }
+    }
+
     /// 사용자가 바에서 끌어 정한 순서. 여기 없는 항목은 메뉴바 순서대로 뒤에 온다.
     @Published var itemOrder: [String] {
         didSet { defaults.set(itemOrder, forKey: "itemOrder") }
@@ -119,6 +124,7 @@ final class Preferences: ObservableObject {
         assignments = (defaults.data(forKey: "assignments"))
             .flatMap { try? JSONDecoder().decode([String: UUID].self, from: $0) } ?? [:]
         excludedIDs = Set(defaults.stringArray(forKey: "excludedIDs") ?? [])
+        hiddenOnlyIDs = Set(defaults.stringArray(forKey: "hiddenOnlyIDs") ?? [])
         itemOrder = defaults.stringArray(forKey: "itemOrder") ?? []
         maxStripWidth = defaults.object(forKey: "maxStripWidth") as? Double ?? 320
         rowCount = min(3, max(1, defaults.object(forKey: "rowCount") as? Int ?? 1))
@@ -138,6 +144,37 @@ final class Preferences: ObservableObject {
         // 지운 그룹에 있던 아이콘은 첫 그룹으로. 아직 고르지 않은 새 아이콘은 「보이기」.
         if assignments[itemID] != nil || !newIconsVisible { return groups.first?.id }
         return nil
+    }
+
+    /// 아이콘 하나를 어디에 둘지: 메뉴바에 그대로 / 그룹(메뉴바에서 빼고 그 그룹 바에 모음) / 숨기기(‹ › 왼쪽에 숨기기만).
+    enum Placement: Hashable {
+        case show
+        case group(UUID)
+        case hide
+    }
+
+    func placement(for itemID: String) -> Placement {
+        if hiddenOnlyIDs.contains(itemID) { return .hide }
+        return group(for: itemID).map(Placement.group) ?? .show
+    }
+
+    func setPlacement(_ placement: Placement, for itemID: String) {
+        switch placement {
+        case .show:
+            hiddenOnlyIDs.remove(itemID)
+            assign(itemID, to: nil)
+        case .group(let id):
+            hiddenOnlyIDs.remove(itemID)
+            assign(itemID, to: id)
+        case .hide:
+            assign(itemID, to: nil)
+            hiddenOnlyIDs.insert(itemID)
+        }
+    }
+
+    /// 메뉴바에서 빼야 하는지(그룹이든 숨기기든 ‹ › 왼쪽으로 간다).
+    func wantsHidden(_ itemID: String) -> Bool {
+        hiddenOnlyIDs.contains(itemID) || group(for: itemID) != nil
     }
 
     /// Puts an item into a group, or turns it off when `group` is nil.
