@@ -69,7 +69,7 @@ enum Localization {
         ("숨기기 · %@", "Hide · %@"),
         ("아이콘 자리가 고른 대로가 아니면", "If icons aren't where you chose"),
         ("다시 정리", "Arrange again"),
-        ("메뉴바에서 숨기기를 켜면 › 버튼이 생겨요. › 오른쪽 아이콘은 늘 보이고, 왼쪽 아이콘은 숨겨져요. ‹ ›를 누르면 잠깐 펼치거나 다시 숨겨요. 노치 뒤에 있어 잡을 수 없는 아이콘은 옮기지 못해요.", "Hiding adds a › button to the menu bar. Icons to its right always show; icons to its left are hidden. Click ‹ › to show them briefly or hide them again. Icons behind the notch can't be grabbed, so Epp can't move them."),
+        ("메뉴바에서 숨기기를 켜면 › 버튼이 메뉴바 아이콘들의 맨 왼쪽에 생겨요. › 오른쪽 아이콘은 늘 보이고, 왼쪽 아이콘은 숨겨져요. ‹ ›를 누르면 잠깐 펼치거나 다시 숨겨요. ⌘를 누른 채 끌면 버튼 자리를 옮길 수 있어요. 노치 뒤에 있어 잡을 수 없는 아이콘은 옮기지 못해요.", "When you turn on hiding, a › button appears at the far left of your menu bar icons. Icons to its right always show; icons to its left are hidden. Click ‹ › to expand or hide them again. ⌘-drag the button to move it. Icons behind the notch can't be moved."),
         ("바 열기", "Open Bar"),
         ("숨긴 아이콘 보이기", "Show Hidden Icons"),
         ("아이콘 다시 숨기기", "Hide Icons Again"),

@@ -40,8 +40,12 @@ final class MenuBarHider {
     /// `collapseNow`가 false면 펼친 채로 구분선만 만든다(처음 켰을 때 아이콘을 옮길 수 있게).
     func setEnabled(_ enabled: Bool, collapseNow: Bool = true) {
         if enabled, divider == nil {
-            StatusItemPlacement.prepare(autosaveName: Self.autosaveName, position: StatusItemPlacement.dividerPosition)
-            StatusItemPlacement.prepare(autosaveName: Self.toggleAutosaveName, position: StatusItemPlacement.togglePosition)
+            // 숨기기 버튼(‹ ›)과 구분선은 처음에 메뉴바 아이콘들의 맨 왼쪽에 둔다. 예전 자리(오른쪽에서 400)는
+            // 그 왼쪽의 「보이기」 아이콘까지 숨겼다. 예전 자리를 쓰던 Mac도 한 번 옮긴다.
+            let moveOnce = !UserDefaults.standard.bool(forKey: StatusItemPlacement.leftmostMigrationKey)
+            UserDefaults.standard.set(true, forKey: StatusItemPlacement.leftmostMigrationKey)
+            StatusItemPlacement.prepare(autosaveName: Self.autosaveName, position: StatusItemPlacement.dividerPosition, force: moveOnce)
+            StatusItemPlacement.prepare(autosaveName: Self.toggleAutosaveName, position: StatusItemPlacement.togglePosition, force: moveOnce)
             // 펼치기 버튼을 먼저 만들어야 구분선이 그 왼쪽에 자리 잡는다.
             let toggle = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
             toggle.autosaveName = Self.toggleAutosaveName
@@ -202,8 +206,11 @@ final class MenuBarHider {
 /// macOS가 `NSStatusItem Preferred Position <autosaveName>`에 기억하는 값(오른쪽 끝에서 잰 거리)을 미리 넣는다.
 /// 사용자가 ⌘로 끌어 옮긴 뒤에는 그 값이 바뀌어 있으니 건드리지 않는다.
 enum StatusItemPlacement {
-    static let dividerPosition: Double = 400
-    static let togglePosition: Double = 380
+    /// 오른쪽 끝에서 잰 거리. 아주 크게 주면 macOS가 다른 아이콘들의 맨 왼쪽에 둔다(구분선이 버튼보다 왼쪽).
+    static let dividerPosition: Double = 5000
+    static let togglePosition: Double = 4990
+    static let leftmostMigrationKey = "peeky.hiderLeftmost"
+
 
     /// `force`면 사용자가 옮긴 자리도 덮어쓴다(「아이콘 자리 되돌리기」에서만).
     static func prepare(autosaveName: String, position: Double, force: Bool = false) {
@@ -222,7 +229,7 @@ enum StatusItemPlacement {
 enum StatusIconCheck {
     /// AppDelegate가 채운다: (그룹 이름, 상태 아이콘)
     static var groupItems: () -> [(name: String, item: NSStatusItem)] = { [] }
-    /// Peeky 아이콘·구분선·‹› 버튼을 처음 자리(오른쪽 끝 가까이, 그룹 → ‹› → 구분선 순)로 되돌린다.
+    /// Peeky 아이콘·구분선·‹› 버튼을 처음 자리(그룹은 오른쪽 끝 가까이, ‹› → 구분선은 맨 왼쪽)로 되돌린다.
     static var resetPositions: () -> Void = {}
     /// 「보이기 / 숨기기」에 맞게 메뉴바 아이콘을 다시 옮긴다.
     static var arrange: () -> Void = {}
