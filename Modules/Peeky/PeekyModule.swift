@@ -133,6 +133,8 @@ public final class PeekyModule: EppModule {
 
     public func stop() {
         isRunning = false
+        idleTimer?.invalidate()
+        idleTimer = nil
         cancellables.removeAll()
         observers.forEach {
             NSWorkspace.shared.notificationCenter.removeObserver($0)
@@ -234,7 +236,12 @@ public final class PeekyModule: EppModule {
             ItemStore.log("arrange: busy, will run again after this pass")
             return
         }
-        guard NSEvent.pressedMouseButtons == 0, hider.menuBarIsVisible else {
+        guard NSEvent.pressedMouseButtons == 0 else {
+            ItemStore.log("arrange: wait, mouse pressed")
+            runWhenMouseIdle { [weak self] in self?.arrangeMenuBar(collapseAfter: collapseAfter) }
+            return
+        }
+        guard hider.menuBarIsVisible else {
             // 방금 만든 버튼은 화면에 보이기까지 잠깐 걸린다. 처음 몇 번은 1초 뒤에 바로 다시 본다(예전엔 10초 뒤라 한참 걸렸다).
             let delay: TimeInterval = arrangeRetries < 3 ? 1 : 10
             ItemStore.log("arrange: wait (\(NSEvent.pressedMouseButtons != 0 ? "mouse pressed" : "menu bar not visible")), retry \(arrangeRetries + 1) in \(Int(delay))s")
@@ -283,7 +290,14 @@ public final class PeekyModule: EppModule {
             ItemStore.shared.refresh(full: full) { [self] in
                 ItemStore.log(String(format: "arrange: read icons (%@) in %.2fs, at %@", full ? "all apps" : "icon apps",
                                      Date().timeIntervalSince(scanStart), elapsed()))
-                if userIsBusy() { ItemStore.log("arrange: stopped, mouse used"); finish(interrupted: true); return }
+                if userIsBusy() {
+                    // 마우스를 쓰는 중이면 멈췄다가, 손을 떼고 잠깐 가만히 있으면 바로 이어서 한다(예전엔 10초 뒤).
+                    ItemStore.log("arrange: paused, mouse used at \(elapsed())")
+                    isArranging = false
+                    ItemStore.shared.unmovableIDs = unmovable
+                    runWhenMouseIdle { [weak self] in self?.arrangeMenuBar(collapseAfter: collapseAfter || wasCollapsed) }
+                    return
+                }
                 let items = ItemStore.shared.items
                 // 방금 만든 구분선·버튼은 자리가 잡히기 전이라 프레임이 없을 수 있다. 그냥 끝내면 첫 숨기기가 안 옮겨졌다(잠시 뒤 다시).
                 guard let divider = hider.dividerFrame, let toggle = hider.toggleFrame else {
@@ -346,6 +360,29 @@ public final class PeekyModule: EppModule {
     }
 
     /// 사용자가 마우스를 쓰고 있었거나 메뉴바가 가려져 있었으면 조금 뒤 다시 한다(몇 번까지만).
+    private var idleTimer: Timer?
+
+    /// 마우스 단추를 놓고 0.75초쯤 가만히 있으면 할 일을 한다(아이콘 옮기기가 사용자 손과 부딪히지 않게). 30초 안에 안 되면 그때 한다.
+    private func runWhenMouseIdle(_ action: @escaping @MainActor () -> Void) {
+        idleTimer?.invalidate()
+        var last = NSEvent.mouseLocation
+        var still = 0
+        var ticks = 0
+        idleTimer = Timer.scheduledTimer(withTimeInterval: 0.25, repeats: true) { [weak self] timer in
+            MainActor.assumeIsolated {
+                guard let self, self.isRunning else { timer.invalidate(); return }
+                ticks += 1
+                let now = NSEvent.mouseLocation
+                if NSEvent.pressedMouseButtons == 0, hypot(now.x - last.x, now.y - last.y) < 2 { still += 1 } else { still = 0 }
+                last = now
+                guard still >= 3 || ticks >= 120 else { return }
+                timer.invalidate()
+                self.idleTimer = nil
+                action()
+            }
+        }
+    }
+
     private func retryArrangeLater(collapseAfter: Bool, after delay: TimeInterval = 10) {
         guard arrangeRetries < 6 else { arrangeRetries = 0; return }
         arrangeRetries += 1
