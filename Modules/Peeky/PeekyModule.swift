@@ -89,14 +89,14 @@ public final class PeekyModule: EppModule {
                 self?.hider.setEnabled(enabled, collapseNow: false)
                 // 새로 만든 구분선·버튼이 메뉴바에 자리 잡을 때까지 조금 기다렸다가 옮긴다.
                 if enabled {
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) { self?.arrangeMenuBar(collapseAfter: true) }
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) { self?.arrangeMenuBar(collapseAfter: true) }
                 }
             }
             .store(in: &cancellables)
         // 아이콘마다 「보이기 / 숨기기」를 바꾸면 잠시 뒤 한 번에 다시 정리한다.
         Publishers.Merge(prefs.$assignments.map { _ in () }, prefs.$excludedIDs.map { _ in () })
             .dropFirst(2)
-            .debounce(for: .seconds(1), scheduler: RunLoop.main)
+            .debounce(for: .seconds(0.3), scheduler: RunLoop.main)
             .sink { [weak self] in self?.syncHidingWithChoices(arrange: true) }
             .store(in: &cancellables)
 
@@ -227,7 +227,8 @@ public final class PeekyModule: EppModule {
     private func arrangeMenuBar(collapseAfter: Bool) {
         guard isRunning, hider.isEnabled, AX.isTrusted, !isArranging else { return }
         guard NSEvent.pressedMouseButtons == 0, hider.menuBarIsVisible else {
-            retryArrangeLater(collapseAfter: collapseAfter)
+            // 방금 만든 버튼은 화면에 보이기까지 잠깐 걸린다. 처음 몇 번은 1초 뒤에 바로 다시 본다(예전엔 10초 뒤라 한참 걸렸다).
+            retryArrangeLater(collapseAfter: collapseAfter, after: arrangeRetries < 3 ? 1 : 10)
             return
         }
         isArranging = true
@@ -252,7 +253,8 @@ public final class PeekyModule: EppModule {
             if collapseAfter || wasCollapsed { hider.collapse() }
             if interrupted { retryArrangeLater(collapseAfter: collapseAfter, after: delay) } else { arrangeRetries = 0 }
         }
-        var firstScan = true
+        // 아이콘 목록이 이미 있으면 모든 앱을 다시 훑지 않는다(앱이 많으면 몇 초 걸린다). 아이콘이 있는 앱만 다시 읽는다.
+        var firstScan = ItemStore.shared.items.isEmpty
         func step(recheckedMissing: Bool = false) {
             // 처음 한 번만 모든 앱을 훑고, 그다음부터는 아이콘이 있는 앱만 다시 읽는다(빠르다).
             let full = firstScan
