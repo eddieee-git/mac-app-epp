@@ -196,7 +196,8 @@ struct ClockListView: View {
     private var ringingBar: some View {
         HStack(spacing: 10) {
             Image(systemName: "bell.and.waves.left.and.right.fill")
-            Text(L("울리는 중: %@", store.ringingTitles.joined(separator: ", ")))
+            Text(L("울리는 중: %@", store.ringingTitles.joined(separator: ", "))
+                 + (store.ringingNotes.isEmpty ? "" : " — " + store.ringingNotes.joined(separator: " / ")))
                 .lineLimit(1)
             Spacer()
             Button(L("%d분 뒤 다시 울림", store.snoozeMinutes)) { store.snooze() }
@@ -643,6 +644,16 @@ private struct AlarmDetail: View {
                         }
                     }
                     .controlSize(.small)
+                }
+                Section {
+                    TextField(L("알람이 울릴 때 함께 볼 메모"),
+                              text: Binding(get: { store.alarms.first { $0.id == item.id }?.note ?? "" },
+                                            set: { store.setAlarmNote(item.id, $0) }),
+                              axis: .vertical)
+                        .lineLimit(2...6)
+                        .labelsHidden()
+                } header: {
+                    Text(L("메모"))
                 }
                 Section {
                     HStack {

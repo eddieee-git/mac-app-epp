@@ -366,6 +366,8 @@ enum Localization {
         ("지운 뒤에도 ⌘Z로 되살릴 수 있어요.", "You can bring it back with ⌘Z."),
         // 타이머 목록
         ("스티커", "Stickies"),
+        ("메모", "Note"),
+        ("알람이 울릴 때 함께 볼 메모", "A note to see when the alarm rings"),
         ("기본값으로", "Restore Defaults"),
         ("타이머 목록", "All Timers & Alarms"),
         ("타이머 목록…", "All Timers & Alarms…"),

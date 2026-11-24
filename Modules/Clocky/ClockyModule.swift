@@ -332,9 +332,10 @@ public final class ClockyModule: NSObject, EppModule, NSMenuDelegate {
                 self?.window.show()
             }
         }
-        let alarms = store.alarms.filter { query.matches(store.displayName(of: $0)) }.map { alarm in
+        let alarms = store.alarms.filter { query.matches(store.displayName(of: $0), $0.note) }.map { alarm in
             EppSearchResult(id: "clocky.a." + alarm.id.uuidString, title: store.displayName(of: alarm),
-                            detail: L("알람") + " · " + String(format: "%02d:%02d", alarm.minutes / 60, alarm.minutes % 60),
+                            detail: [L("알람") + " · " + String(format: "%02d:%02d", alarm.minutes / 60, alarm.minutes % 60),
+                                     query.snippet(alarm.note)].compactMap { $0 }.filter { !$0.isEmpty }.joined(separator: " · "),
                             symbol: "alarm") { [weak self] in
                 self?.window.store.selectedAlarmID = alarm.id
                 self?.window.show()

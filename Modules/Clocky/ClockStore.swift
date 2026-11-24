@@ -59,6 +59,8 @@ struct AlarmItem: Identifiable, Equatable {
     var days: Set<Int>
     /// 이 알람만의 소리. 없으면 설정의 기본 소리.
     var sound: String?
+    /// 알람에 남긴 메모. 울릴 때 이름 아래에 보여 준다.
+    var note = ""
     /// 정해 둔 다음 시각. 꺼져 있으면 없다.
     var next: Date?
     /// "5분 뒤 다시"를 누른 뒤 한 번 더 울릴 때. 정해 둔 시각과 따로 센다.
@@ -159,6 +161,7 @@ final class ClockStore: ObservableObject {
         var sound: String?
         /// 앱이 꺼진 동안 지난 알람을 켤 때 울리려고 저장한다.
         var next: Date?
+        var note: String?
     }
     private let defaults: UserDefaults
     /// 벽시계와 잠자기 중에도 흐르는 시계의 차이. 시스템 시계를 손으로 바꾸면 달라진다.
@@ -364,6 +367,7 @@ final class ClockStore: ObservableObject {
         item.snoozeUntil = saved.snoozeUntil
         item.next = saved.next
         item.sound = saved.sound
+        item.note = saved.note ?? ""
         return item
     }
 
@@ -402,7 +406,8 @@ final class ClockStore: ObservableObject {
         }
         let savedAlarms = alarms.map {
             SavedAlarm(id: $0.id, name: $0.name, minutes: $0.minutes, enabled: $0.enabled, repeats: $0.repeats,
-                       number: $0.number, days: $0.days.sorted(), snoozeUntil: $0.snoozeUntil, sound: $0.sound, next: $0.next)
+                       number: $0.number, days: $0.days.sorted(), snoozeUntil: $0.snoozeUntil, sound: $0.sound, next: $0.next,
+                       note: $0.note.isEmpty ? nil : $0.note)
         }
         if let data = try? JSONEncoder().encode(savedTimers) { defaults.set(data, forKey: Keys.timers) }
         if let data = try? JSONEncoder().encode(savedAlarms) { defaults.set(data, forKey: Keys.alarms) }
@@ -748,6 +753,17 @@ final class ClockStore: ObservableObject {
         updateAlarm(id) { $0.sound = sound }
     }
 
+    func setAlarmNote(_ id: UUID, _ note: String) {
+        updateAlarm(id) { $0.note = note }
+    }
+
+    /// 지금 울리는 알람에 남긴 메모들(비어 있지 않은 것만). 시계 창과 목록 창에 보여 준다.
+    var ringingNotes: [String] {
+        alarms.filter { ringingAlarmIDs.contains($0.id) }
+            .map { $0.note.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+    }
+
     func setAlarmDays(_ id: UUID, _ days: Set<Int>) {
         updateAlarm(id) { $0.days = days }
     }
@@ -779,6 +795,7 @@ final class ClockStore: ObservableObject {
         var copy = AlarmItem(name: source.name, number: (alarms.map(\.number).max() ?? 0) + 1, minutes: source.minutes,
                              enabled: source.enabled, days: source.days)
         copy.sound = source.sound
+        copy.note = source.note
         copy.schedule(after: Date())
         alarms.insert(copy, at: index + 1)
         return copy.id

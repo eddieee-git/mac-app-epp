@@ -63,3 +63,20 @@ import Testing
         #expect(!store.isRinging && store.pendingEventAlerts.isEmpty)
     }
 }
+
+@Suite(.serialized) struct AlarmNoteTests {
+    @Test func 알람_메모를_저장하고_복제하고_울릴_때_보여_준다() {
+        let name = "ClockyNoteTests-\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: name)!
+        defer { defaults.removePersistentDomain(forName: name) }
+        let store = ClockStore(defaults: defaults)
+        let id = store.addAlarm()
+        store.setAlarmNote(id, "  약 먹고 물 마시기 \n")
+        store.save()
+        let again = ClockStore(defaults: defaults)
+        #expect(again.alarms.first { $0.id == id }?.note == "  약 먹고 물 마시기 \n")
+        #expect(again.ringingNotes.isEmpty, "울리지 않으면 메모도 안 보인다")
+        let copy = again.duplicateAlarm(id)
+        #expect(again.alarms.first { $0.id == copy }?.note == "  약 먹고 물 마시기 \n", "복제해도 메모가 따라간다")
+    }
+}

@@ -142,6 +142,14 @@ struct FlipTimerView: View {
                 Text(store.ringingTitles.joined(separator: ", "))
                     .font(.system(size: 13, weight: .semibold))
                     .lineLimit(1)
+                // 알람에 남긴 메모
+                if !store.ringingNotes.isEmpty {
+                    Text(store.ringingNotes.joined(separator: " / "))
+                        .font(.system(size: 12))
+                        .foregroundStyle(.secondary)
+                        .lineLimit(3)
+                        .multilineTextAlignment(.center)
+                }
                 HStack(spacing: 8) {
                     // 울리는 동안 창의 다른 곳을 누르면 꺼지지만, 이 버튼은 눌린다.
                     Button(L("%d분 뒤 다시 울림", store.snoozeMinutes)) { store.snooze() }
