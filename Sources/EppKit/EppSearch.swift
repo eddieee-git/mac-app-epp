@@ -21,6 +21,36 @@ public struct EppSearchQuery: Sendable {
         }
     }
 
+    /// 명령 이름과 맞는지: 입력이 이름의 일부(예: "캡" → "캡처")이거나, 입력에 이름이 들어 있으면(예: "새 스티커 쓰기").
+    public func matchesCommand(_ names: String...) -> Bool {
+        guard !text.isEmpty else { return false }
+        return names.contains { name in
+            name.range(of: text, options: [.caseInsensitive, .diacriticInsensitive]) != nil
+                || text.range(of: name, options: [.caseInsensitive, .diacriticInsensitive]) != nil
+        }
+    }
+
+    /// "5분", "1시간 30분", "90초", "10m", "1h 5m" 같은 시간. 단위가 하나도 없으면 nil.
+    public var duration: Int? {
+        let lower = text.lowercased()
+        let units: [(pattern: String, seconds: Int)] = [
+            (#"(\d+)\s*(시간|hours?|hrs?|h)\b"#, 3600), (#"(\d+)\s*(분|minutes?|mins?|m)\b"#, 60),
+            (#"(\d+)\s*(초|seconds?|secs?|s)\b"#, 1),
+        ]
+        var total = 0, found = false
+        for (pattern, seconds) in units {
+            guard let regex = try? NSRegularExpression(pattern: pattern) else { continue }
+            let range = NSRange(lower.startIndex..., in: lower)
+            for match in regex.matches(in: lower, range: range) {
+                if let r = Range(match.range(at: 1), in: lower), let value = Int(lower[r]) {
+                    total += value * seconds
+                    found = true
+                }
+            }
+        }
+        return found && total > 0 ? total : nil
+    }
+
     /// 첫 낱말이 나온 곳 앞뒤를 한 줄로 잘라 보여 줄 글.
     public func snippet(_ text: String?, length: Int = 80) -> String? {
         guard let text, !text.isEmpty else { return nil }

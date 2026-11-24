@@ -74,7 +74,16 @@ final class AppSettings: ObservableObject {
         }
     }
 
-    var ignoredBundleIDs: Set<String> { Self.parseBundleIDs(ignoredApps) }
+    /// 목록에서 지워도 늘 기록하지 않는 앱: 비밀번호 관리자. (숨김 표시 없이 복사하는 앱도 있어서)
+    static let alwaysIgnored: Set<String> = [
+        "com.apple.keychainaccess", "com.apple.Passwords",
+        "com.1password.1password", "com.agilebits.onepassword7", "com.agilebits.onepassword-osx",
+        "com.bitwarden.desktop", "com.dashlane.dashlanephonefinal", "com.lastpass.LastPass",
+        "org.keepassxc.keepassxc", "com.markmcguill.strongbox.mac", "in.sinew.Enpass-Desktop",
+        "me.proton.pass.electron", "com.nordpass.macos.NordPass",
+    ]
+
+    var ignoredBundleIDs: Set<String> { Self.parseBundleIDs(ignoredApps).union(Self.alwaysIgnored) }
 
     static func parseBundleIDs(_ text: String) -> Set<String> {
         Set(text.split(whereSeparator: \.isNewline)

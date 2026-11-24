@@ -322,6 +322,27 @@ public final class ClockyModule: NSObject, EppModule, NSMenuDelegate {
     }
 
     /// epp://clocky/show — 시계 창, epp://clocky/list — 타이머 목록, epp://clocky/toggle — 고른 타이머 시작/일시정지
+    /// 빠른 검색 명령: "5분", "1시간 30분" → 그 시간으로 새 타이머 시작. "타이머" → 시계 창·타이머 목록.
+    public func commands(_ query: EppSearchQuery) -> [EppSearchResult] {
+        var results: [EppSearchResult] = []
+        if let seconds = query.duration, seconds <= ClockStore.maxDuration {
+            results.append(EppSearchResult(id: "clocky.cmd.timer", title: L("%@ 타이머 시작", clockText(seconds)), symbol: "timer") { [weak self] in
+                guard let self else { return }
+                let store = self.window.store
+                let id = store.addTimer()
+                store.setDuration(id, seconds)
+                store.selectedTimerID = id
+                store.start(id)
+                self.window.show(takeFocus: false)
+            })
+        }
+        if query.matchesCommand(L("타이머"), L("시계"), "timer", "clock") {
+            results.append(EppSearchResult(id: "clocky.cmd.show", title: L("시계 창 열기"), symbol: "clock") { [weak self] in self?.window.show() })
+            results.append(EppSearchResult(id: "clocky.cmd.list", title: L("타이머 목록"), symbol: "list.bullet") { [weak self] in self?.showList() })
+        }
+        return results
+    }
+
     /// 빠른 검색: 타이머·알람 이름에서 찾는다. 고르면 시계 창에서 그 항목을 고른다.
     public func search(_ query: EppSearchQuery) -> [EppSearchResult] {
         let store = window.store

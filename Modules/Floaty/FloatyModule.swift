@@ -766,6 +766,25 @@ public final class FloatyModule: NSObject, EppModule, NSMenuDelegate {
     }
 
     /// epp://floaty/new — 새 스티커, epp://floaty/manager — 스티커 관리, epp://floaty/toggle — 모두 표시/숨기기
+    /// 빠른 검색 명령: "새 스티커 <글>" → 그 글로 새 스티커, "스티커" → 새 스티커·스티커 관리.
+    public func commands(_ query: EppSearchQuery) -> [EppSearchResult] {
+        var results: [EppSearchResult] = []
+        let prefixes = [L("새 스티커"), "new sticky", "+"]
+        if let prefix = prefixes.first(where: { query.text.lowercased().hasPrefix($0.lowercased()) }) {
+            let body = String(query.text.dropFirst(prefix.count)).trimmingCharacters(in: .whitespaces)
+            if !body.isEmpty {
+                results.append(EppSearchResult(id: "floaty.cmd.newText", title: L("새 스티커: %@", body), symbol: "note.text.badge.plus") { [weak self] in
+                    _ = self?.handle(request: .makeSticky(text: body))
+                })
+            }
+        }
+        if query.matchesCommand(L("새 스티커"), L("스티커"), "sticky", "note") {
+            results.append(EppSearchResult(id: "floaty.cmd.new", title: L("새 스티커"), symbol: "note.text.badge.plus") { [weak self] in self?.newNote() })
+            results.append(EppSearchResult(id: "floaty.cmd.manager", title: L("스티커 관리…"), symbol: "square.grid.2x2") { [weak self] in self?.showManager() })
+        }
+        return results
+    }
+
     /// 빠른 검색: 제목과 본문에서 찾는다. 잠근 스티커는 찾지 않는다. 고르면 그 스티커를 앞으로 가져온다.
     public func search(_ query: EppSearchQuery) -> [EppSearchResult] {
         store.activeNotes.filter { !$0.isLocked && query.matches($0.title, $0.text) }

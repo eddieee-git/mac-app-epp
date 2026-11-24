@@ -133,7 +133,8 @@ extension LibraryWindowController {
 
     @objc func revealAction() {
         guard let item = selectedItem else { return }
-        NSWorkspace.shared.activateFileViewerSelecting([store.url(for: item)])
+        guard let url = store.exportURL(for: item) else { NSSound.beep(); return }
+        NSWorkspace.shared.activateFileViewerSelecting([url])
     }
 
     @objc func toggleKeep() {

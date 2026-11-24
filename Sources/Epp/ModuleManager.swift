@@ -91,13 +91,25 @@ final class ModuleManager: ObservableObject {
     }
 
     /// 빠른 검색: 켠 기능마다 맞는 것을 모은다(기능마다 최대 `limit`개, 기능 목록 순서).
-    func search(_ query: EppSearchQuery, limit: Int = 6) -> [(info: EppModuleInfo, results: [EppSearchResult])] {
+    /// 맨 위에 "실행"(명령), 그 아래 기능마다 찾은 내용.
+    func search(_ query: EppSearchQuery, limit: Int = 6) -> [(title: String, results: [EppSearchResult])] {
         guard !query.isEmpty else { return [] }
-        return enabledTypes.compactMap { type in
-            guard let module = running[type.info.id] else { return nil }
+        let modules = enabledTypes.compactMap { type in running[type.info.id].map { (type.info, $0) } }
+        let commands = modules.flatMap { $0.1.commands(query) } + hostCommands(query)
+        var groups: [(title: String, results: [EppSearchResult])] = commands.isEmpty ? [] : [(L("실행"), Array(commands.prefix(8)))]
+        for (info, module) in modules {
             let results = Array(module.search(query).prefix(limit))
-            return results.isEmpty ? nil : (type.info, results)
+            if !results.isEmpty { groups.append((info.name, results)) }
         }
+        return groups
+    }
+
+    /// Epp 본체 명령(설정 열기)
+    private func hostCommands(_ query: EppSearchQuery) -> [EppSearchResult] {
+        guard query.matchesCommand(L("Epp 설정"), "settings", "설정") else { return [] }
+        return [EppSearchResult(id: "epp.settings", title: L("Epp 설정 열기"), symbol: "gearshape") { [weak self] in
+            self?.openSettings(nil)
+        }]
     }
 
     #if DEBUG

@@ -24,6 +24,10 @@ enum SelfTest {
         count = 0
         EventLog.isEnabled = false
         defer { EventLog.isEnabled = true }
+        // 점검은 키체인을 쓰지 않고 시험용 열쇠로 암호화한다.
+        let realCrypto = CaptureFiles.crypto
+        CaptureFiles.crypto = EppCrypto(testKey: SymmetricKey(size: .bits256))
+        defer { CaptureFiles.crypto = realCrypto }
         // 설정을 쓰는 점검을 위해 임시 저장소로 만든다(기능을 켜지 않은 채 점검할 때).
         if AppSettings.shared == nil {
             let suite = "grabby-selftest-\(UUID().uuidString)"
@@ -388,6 +392,14 @@ enum SelfTest_StoreTests {
         // 남은 캡처의 파일은 있고, 정리된 캡처의 파일은 지워져야 한다.
         let files = (try? FileManager.default.contentsOfDirectory(atPath: dir.path).filter { $0.hasSuffix(".png") }) ?? []
         expect(files.count == 3, "png \(files.count)개")
+        // 보관함 파일은 암호화돼 있고, 다시 열면 읽힌다. 내보낸 사본은 평문 PNG다.
+        let raw = (try? Data(contentsOf: dir.appendingPathComponent(files[0]))) ?? Data()
+        expect(EppCrypto.isEncrypted(raw), "캡처 파일은 암호화")
+        expect(CaptureStore(directory: dir).items.count == 3, "암호화한 목록을 다시 읽음")
+        let exported = store.exportURL(for: store.items[0])
+        let plain = exported.flatMap { try? Data(contentsOf: $0) } ?? Data()
+        expect(plain.starts(with: Data([0x89, 0x50, 0x4E, 0x47])), "끌어다 놓을 사본은 평문 PNG")
+        CaptureFiles.cleanExports()
     }
 
     static func test_removeAllKeepsKeptWhenAsked() {

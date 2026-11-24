@@ -69,6 +69,15 @@ final class ItemStore: ObservableObject {
     /// - Parameters:
     ///   - full: 실행 중인 모든 앱을 훑는다. 아니면 상태 아이콘이 있던 앱만 다시 본다.
     ///   - captureIDs: 이 항목들만 아이콘을 캡처한다(nil이면 전부).
+    /// 아이콘이 있는 앱 목록에 이 앱도 넣어 다음 훑기에서 읽게 한다(새로 켠 앱). 모든 앱을 다시 훑지 않아도 된다.
+    func include(pid: pid_t) { knownPIDs.insert(pid) }
+
+    /// 끈 앱의 아이콘을 목록에서 바로 뺀다(다시 훑지 않는다).
+    func forget(pid: pid_t) {
+        knownPIDs.remove(pid)
+        if items.contains(where: { $0.pid == pid }) { items.removeAll { $0.pid == pid } }
+    }
+
     func refresh(full: Bool = false, captureIDs: Set<String>? = nil, completion: (() -> Void)? = nil) {
         if let completion { pendingCompletions.append(completion) }
         guard !isScanning else { return }

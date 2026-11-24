@@ -74,6 +74,9 @@ public protocol EppModule: AnyObject {
     /// 개인 내용 중 잠근 것(잠근 스티커 등)은 돌려주지 않는다.
     func search(_ query: EppSearchQuery) -> [EppSearchResult]
 
+    /// Epp 빠른 검색의 "실행" 칸: 입력과 맞는 명령(예: "5분" → 5분 타이머 시작, "새 스티커"). 결과는 맨 위에 모아 보여 준다.
+    func commands(_ query: EppSearchQuery) -> [EppSearchResult]
+
     /// 다른 기능이 보낸 부탁(`context.send`). 처리했으면 true.
     func handle(request: EppRequest) -> Bool
 
@@ -93,6 +96,7 @@ public extension EppModule {
     func handleNotification(identifier: String) {}
     func shouldQuit() -> Bool { true }
     func search(_ query: EppSearchQuery) -> [EppSearchResult] { [] }
+    func commands(_ query: EppSearchQuery) -> [EppSearchResult] { [] }
     func handle(request: EppRequest) -> Bool { false }
 }
 

@@ -221,7 +221,7 @@ private struct GeneralPage: View {
     static var keywords: [String] {
         [L("기능"), L("모두 켜기"), L("권한"), EppPermission.accessibility.title, EppPermission.screenRecording.title,
          L("빠른 검색"), L("빠른 검색 열기"), L("로그인 시 실행"), L("Dock에 아이콘 보이기"), L("테마"), L("언어"),
-         L("업데이트"), L("문제 해결"), L("진단 로그 남기기"), L("데이터 폴더"), L("설정 옮기기"), L("설정 내보내기…"), L("설정 가져오기…"), L("정보")]
+         L("업데이트"), L("문제 해결"), L("진단 로그 남기기"), L("데이터 폴더"), L("설정 옮기기"), L("설정 내보내기…"), L("설정 가져오기…"), L("모두 내보내기…"), L("모두 가져오기…"), L("정보")]
     }
 
     @ObservedObject var manager: ModuleManager
@@ -360,16 +360,22 @@ private struct GeneralPage: View {
             }
 
             Section {
-                LabeledContent(L("설정 파일")) {
+                LabeledContent(L("설정만")) {
                     HStack {
                         Button(L("설정 내보내기…")) { SettingsBackup.exportWithPanel() }
                         Button(L("설정 가져오기…")) { SettingsBackup.importWithPanel() }
                     }
                 }
+                LabeledContent(L("설정과 내용 모두")) {
+                    HStack {
+                        Button(L("모두 내보내기…")) { DataBackup.exportWithPanel(manager: manager) }
+                        Button(L("모두 가져오기…")) { DataBackup.importWithPanel(manager: manager) }
+                    }
+                }
             } header: {
                 Text(L("설정 옮기기"))
             } footer: {
-                Text(L("켠 기능·단축키·테마 같은 설정을 파일 하나로 옮겨요(새 Mac 등). 클립보드 기록·스티커·캡처 같은 내용은 들어가지 않아요. 내용은 위의 데이터 폴더를 복사해요."))
+                Text(L("「설정만」은 켠 기능·단축키·테마 같은 설정을 옮겨요. 「모두」는 클립보드 기록·스티커·캡처·타이머 같은 내용과 그 암호화 열쇠까지 파일 하나에 담고, 정한 암호로 잠가요(새 Mac으로 옮길 때)."))
                     .font(.caption).foregroundStyle(.secondary)
             }
 

@@ -111,13 +111,16 @@ public final class PeekyModule: EppModule {
 
         let center = NSWorkspace.shared.notificationCenter
         for name in [NSWorkspace.didLaunchApplicationNotification, NSWorkspace.didTerminateApplicationNotification] {
-            observers.append(center.addObserver(forName: name, object: nil, queue: .main) { [weak self] _ in
-                MainActor.assumeIsolated { self?.appsChanged() }
+            observers.append(center.addObserver(forName: name, object: nil, queue: .main) { [weak self] note in
+                let app = note.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication
+                let pid = app?.processIdentifier
+                let launched = note.name == NSWorkspace.didLaunchApplicationNotification
+                MainActor.assumeIsolated { self?.appsChanged(pid: pid, launched: launched) }
             })
         }
         observers.append(NotificationCenter.default.addObserver(forName: NSApplication.didChangeScreenParametersNotification,
                                                                 object: nil, queue: .main) { [weak self] _ in
-            MainActor.assumeIsolated { self?.appsChanged() }
+            MainActor.assumeIsolated { self?.appsChanged(pid: nil, launched: false) }
         })
 
         let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "-"
@@ -170,6 +173,20 @@ public final class PeekyModule: EppModule {
     }
 
     public static func runSelfTest() -> Bool { SelfTest.run() }
+
+    /// 빠른 검색 명령: "메뉴바" → 메뉴바 다시 정리, 첫 그룹 바 열기.
+    public func commands(_ query: EppSearchQuery) -> [EppSearchResult] {
+        guard query.matchesCommand(L("메뉴바"), "menu bar") else { return [] }
+        var results = [EppSearchResult(id: "peeky.cmd.arrange", title: L("메뉴바 다시 정리"), symbol: "arrow.triangle.2.circlepath") { [weak self] in
+            self?.arrangeMenuBar(collapseAfter: true)
+        }]
+        if let first = prefs.groups.first {
+            results.append(EppSearchResult(id: "peeky.cmd.bar", title: L("아이콘 바 열기"), symbol: "menubar.rectangle") { [weak self] in
+                self?.toggleBar(group: first.id)
+            })
+        }
+        return results
+    }
 
     public func globalShortcuts() -> [EppShortcutInfo] {
         let modifiers = prefs.hotKeyModifiers
@@ -327,6 +344,9 @@ public final class PeekyModule: EppModule {
                 unmovable.formUnion(plan.blocked)
                 guard let (item, move) = plan.move else { finish(interrupted: false); return }
                 tried.insert(item.id)
+                if moved == 0 {
+                    EppToast.show(L("메뉴바 아이콘을 옮기는 중이에요 · 마우스는 잠깐 그대로 두세요"), symbol: "cursorarrow.motionlines")
+                }
                 moved += 1
                 ItemStore.log("arrange: move \(move.from.midX < divider.midX ? "show" : "hide") at \(elapsed())")
                 pending = (item.id, item.displayName, move.from.midX < divider.midX)
@@ -539,18 +559,34 @@ public final class PeekyModule: EppModule {
         }
     }
 
-    private func appsChanged() {
+    /// 앱을 켜거나 끌 때. 예전에는 그때마다 모든 앱을 다시 훑었다(앱이 많으면 무겁다).
+    /// 이제 끈 앱은 목록에서 바로 빼고, 켠 앱은 그 앱만 더해 아이콘이 있는 앱만 다시 읽는다.
+    private func appsChanged(pid: pid_t?, launched: Bool) {
         guard isRunning else { return }
-        // Apps add their status items a moment after launching; debounce and rescan everything.
-        ItemStore.shared.invalidate()
+        guard let pid else {
+            ItemStore.shared.invalidate()
+            scheduleRefresh(after: 1.5)
+            return
+        }
+        if !launched {
+            ItemStore.shared.forget(pid: pid)
+            return
+        }
+        ItemStore.shared.include(pid: pid)
+        // 앱은 켠 뒤 조금 있다가 메뉴바 아이콘을 만든다. 늦게 만드는 앱을 위해 한 번 더 본다.
+        scheduleRefresh(after: 1.5)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 6) { [weak self] in self?.scheduleRefresh(after: 0) }
+    }
+
+    private func scheduleRefresh(after delay: TimeInterval) {
         refreshWork?.cancel()
         let work = DispatchWorkItem { [weak self] in
-            ItemStore.shared.refresh(full: true) {
+            ItemStore.shared.refresh(full: false) {
                 MainActor.assumeIsolated { self?.noteNewItems() }
             }
         }
         refreshWork = work
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5, execute: work)
+        DispatchQueue.main.asyncAfter(deadline: .now() + delay, execute: work)
     }
 
     /// 새 앱의 아이콘은 macOS가 왼쪽 끝(숨기는 쪽)에 놓는다. 새 아이콘은 「보이기」가 기본이라 자리를 맞춘다.

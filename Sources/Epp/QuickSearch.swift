@@ -125,7 +125,7 @@ final class QuickSearchPanel: NSPanel {
 @MainActor
 final class QuickSearchModel: ObservableObject {
     @Published var query = "" { didSet { refresh() } }
-    @Published private(set) var groups: [(info: EppModuleInfo, results: [EppSearchResult])] = []
+    @Published private(set) var groups: [(title: String, results: [EppSearchResult])] = []
     @Published var selection = 0
     /// 바뀌면 검색 칸에 커서를 둔다.
     @Published var focusToken = 0
@@ -157,7 +157,7 @@ struct QuickSearchView: View {
         VStack(spacing: 0) {
             HStack(spacing: 10) {
                 Image(systemName: "magnifyingglass").font(.title2).foregroundStyle(.secondary)
-                TextField(L("클립보드·스티커·캡처·타이머에서 찾기"), text: $model.query)
+                TextField(L("찾기 또는 실행 (예: 5분, 새 스티커, 캡처)"), text: $model.query)
                     .textFieldStyle(.plain)
                     .font(.title2)
                     .focused($focused)
@@ -176,7 +176,7 @@ struct QuickSearchView: View {
 
     @ViewBuilder private var content: some View {
         if model.query.trimmingCharacters(in: .whitespaces).isEmpty {
-            hint(L("찾을 말을 입력하세요. ↑↓로 고르고 ↩로 열어요. 클립보드 항목은 앞의 앱에 붙여 넣어요."))
+            hint(L("찾을 말을 입력하세요. ↑↓로 고르고 ↩로 열어요. 클립보드 항목은 앞의 앱에 붙여 넣어요.\n「5분」은 타이머, 「새 스티커」, 「캡처」처럼 바로 실행할 수도 있어요."))
         } else if model.groups.isEmpty {
             hint(L("찾는 내용이 없어요."))
         } else {
@@ -184,8 +184,8 @@ struct QuickSearchView: View {
                 ScrollView {
                     LazyVStack(alignment: .leading, spacing: 2) {
                         let ids = model.flat.map(\.id)
-                        ForEach(model.groups, id: \.info.id) { group in
-                            Text(group.info.name).font(.caption.bold()).foregroundStyle(.secondary)
+                        ForEach(model.groups, id: \.title) { group in
+                            Text(group.title).font(.caption.bold()).foregroundStyle(.secondary)
                                 .padding(.horizontal, 10).padding(.top, 8)
                             ForEach(group.results) { result in
                                 let index = ids.firstIndex(of: result.id) ?? 0

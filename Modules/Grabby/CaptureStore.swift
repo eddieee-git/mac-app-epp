@@ -88,9 +88,24 @@ final class CaptureStore {
     init(directory: URL) {
         self.directory = directory
         try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-        if let data = try? Data(contentsOf: indexURL), let saved = try? JSONDecoder().decode([CaptureItem].self, from: data) {
+        let indexWasPlain = (try? Data(contentsOf: indexURL)).map { !EppCrypto.isEncrypted($0) } ?? false
+        if let data = CaptureFiles.readData(indexURL), let saved = try? JSONDecoder().decode([CaptureItem].self, from: data) {
             items = saved.filter { FileManager.default.fileExists(atPath: url(for: $0).path) }
         }
+        // 암호화하기 전에 저장한 캡처를 한 번 암호화해 둔다(뒤에서 천천히).
+        if indexWasPlain {
+            let urls = items.flatMap { [url(for: $0), originalURL(for: $0), annotationsURL(for: $0)] }
+            io.async { urls.forEach(CaptureFiles.encryptInPlace) }
+            save(notify: false)
+        }
+    }
+
+    /// 다른 앱으로 끌어다 놓거나 Finder에서 볼 평문 PNG 사본(임시 폴더). 보관함 파일은 암호화돼 있다.
+    func exportURL(for item: CaptureItem) -> URL? {
+        if let image = pending[url(for: item)] { CaptureFiles.writePNG(image, to: url(for: item)) }
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd HH.mm.ss"
+        return CaptureFiles.plainCopy(of: url(for: item), name: L("캡처") + " " + formatter.string(from: item.date))
     }
 
     private var indexURL: URL { directory.appendingPathComponent("index.json") }
@@ -265,7 +280,7 @@ final class CaptureStore {
     private var pendingAnnotations: [UUID: [Annotation]] = [:]
 
     private func loadAnnotations(_ item: CaptureItem) -> [Annotation]? {
-        guard let data = try? Data(contentsOf: annotationsURL(for: item)) else { return nil }
+        guard let data = CaptureFiles.readData(annotationsURL(for: item)) else { return nil }
         return try? JSONDecoder().decode([Annotation].self, from: data)
     }
 
@@ -274,13 +289,8 @@ final class CaptureStore {
         let cg: CGImage?
         if let image = pending[url(for: item)] {
             cg = Self.downscale(image, maxPixel: 400)
-        } else if let source = CGImageSourceCreateWithURL(url(for: item) as CFURL, nil) {
-            cg = CGImageSourceCreateThumbnailAtIndex(source, 0, [
-                kCGImageSourceCreateThumbnailFromImageAlways: true,
-                kCGImageSourceThumbnailMaxPixelSize: 400,
-            ] as CFDictionary)
         } else {
-            cg = nil
+            cg = CaptureFiles.thumbnail(url(for: item), maxPixel: 400)
         }
         guard let cg else { return nil }
         let image = NSImage(cgImage: cg, size: NSSize(width: cg.width, height: cg.height))
@@ -306,9 +316,8 @@ final class CaptureStore {
 
     /// 파일에서 이미지를 연다. 어느 스레드에서나 불러도 된다.
     nonisolated static func decode(_ url: URL) -> CGImage? {
-        guard let source = CGImageSourceCreateWithURL(url as CFURL, nil) else { return nil }
         // 바로 풀어 두어야 뒤에서 연 의미가 있다(안 그러면 처음 그릴 때 메인 스레드에서 푼다).
-        return CGImageSourceCreateImageAtIndex(source, 0, [kCGImageSourceShouldCacheImmediately: true] as CFDictionary)
+        CaptureFiles.readImage(url)
     }
 
     private func writeEditable(_ item: CaptureItem, original: CGImage?, annotations: [Annotation]) {
@@ -317,7 +326,7 @@ final class CaptureStore {
             write(original, to: originalURL)
             pendingAnnotations[item.id] = annotations
             io.async {
-                try? data.write(to: annotationsURL, options: .atomic)
+                CaptureFiles.writeData(data, to: annotationsURL)
                 DispatchQueue.main.async { [weak self] in self?.pendingAnnotations[item.id] = nil }
             }
         } else {
@@ -343,10 +352,7 @@ final class CaptureStore {
     private func write(_ image: CGImage, to url: URL) {
         pending[url] = image
         io.async {
-            if let destination = CGImageDestinationCreateWithURL(url as CFURL, UTType.png.identifier as CFString, 1, nil) {
-                CGImageDestinationAddImage(destination, image, nil)
-                CGImageDestinationFinalize(destination)
-            }
+            CaptureFiles.writePNG(image, to: url)
             DispatchQueue.main.async { [weak self] in
                 // 그 사이에 같은 자리에 새 이미지를 썼으면 그대로 둔다.
                 if self?.pending[url] === image { self?.pending[url] = nil }
@@ -357,7 +363,7 @@ final class CaptureStore {
     private func save(notify: Bool = true) {
         if let data = try? JSONEncoder().encode(items) {
             let indexURL = indexURL
-            io.async { try? data.write(to: indexURL, options: .atomic) }
+            io.async { CaptureFiles.writeData(data, to: indexURL) }
         }
         if notify { NotificationCenter.default.post(name: Self.didChange, object: self) }
     }

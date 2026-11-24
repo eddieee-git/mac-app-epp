@@ -110,6 +110,8 @@ Modules/<이름>/     기능 하나 (예: Modules/Keepy)
     예전 평문 파일은 그대로 읽고 다음 저장 때 암호화한다. 읽지 못한 파일은 덮어쓰지 말고 옆에 남긴다(`history-unreadable-…`).
     인증서로 서명한 Epp가 새로 만든 키는 Epp만 읽는다. 임시 서명일 때 만든 키는 다른 앱도 묻지 않고 읽는다.
     확인: `"build/Epp Dev.app/Contents/MacOS/Epp" -debugCryptoCheck <이름>` → `security dump-keychain -a`로 접근 목록을 본 뒤 그 키를 지운다.
+  - 새 `EppCrypto(account:)`를 만들면 `DataBackup.keyAccounts`에도 더한다(모두 내보내기에 열쇠가 들어가야 새 Mac에서 열린다).
+    지금: keepy-history, floaty-locked-notes, grabby-captures. 자체 점검은 실제 키체인 대신 시험용 열쇠(`EppCrypto(testKey:)`)를 쓴다.
   - `epp://` 주소는 웹페이지도 연다. `handle(url:)`은 **창 열기처럼 해가 없는 명령만** 받고 모르는 명령은 무시한다(기본 동작으로 넘기지 않는다).
     묻지 않고 화면을 찍거나 데이터를 지우는 명령은 넣지 않는다. 본체가 10초에 5번으로 막는다(`RateGate`).
 
@@ -137,6 +139,8 @@ Modules/<이름>/     기능 하나 (예: Modules/Keepy)
 - 자기 `HotKey.swift`를 지우고 EppKit `HotKey(keyCode:modifiers:action:)`을 쓴다. **기능마다 Carbon 처리기를 따로 두면 번호가 겹쳐 다른 기능의 단축키가 불린다.**
 - `Preferences.shared`, `PeekyStorage.defaults`·`logPath`는 `PeekyModule.init`에서 Epp가 준 값으로 채운다.
   `NSStatusItem Preferred Position …`(`StatusItemPlacement`)만은 macOS가 앱의 기본 UserDefaults에서 읽으므로 그대로 둔다.
+- 아이콘마다 보이기 / 그룹(`assignments`) / 숨기기(`hiddenOnlyIDs`, 그룹 바엔 없음): `Preferences.placement`·`setPlacement`·`wantsHidden`.
+  숨기거나 그룹에 넣은 게 생기면 "메뉴바에서 숨기기"가 저절로 켜지고, 없으면 꺼진다. 옮기는 중 마우스를 쓰면 손을 멈출 때 이어서 한다(`runWhenMouseIdle`).
 - 그룹을 지우면 그 아이콘은 남은 첫 그룹으로 간다(원본은 배정을 지워 아이콘 바에서 빠졌다 — Epp에서 고침, 점검 있음).
 - 숨기기가 Epp 아이콘까지 밀어내지 않게 `context.hostStatusItems()`를 보호 목록에 넣는다. Epp 아이콘은 `autosaveName = "EppMain"`, 처음 자리는 오른쪽 끝에서 170.
 - 오른쪽 클릭 메뉴의 "Peeky 종료"와 업데이트 항목을 뺐다(종료는 Epp 메뉴). 설정에서 로그인·언어·업데이트·정보를 뺐다.
@@ -175,6 +179,7 @@ Modules/<이름>/     기능 하나 (예: Modules/Keepy)
 - `AppPresence`(창이 열리면 일반 앱으로 바꾸기)를 뺐다. Dock·앱 메뉴는 Epp의 "Dock에 아이콘 보이기"를 따른다.
 - 앱 메뉴(파일: 캡처 창 열기·저장 ⌘S, 윈도우: 최소화 ⌘M 등)는 `mainMenus()`.
 - 알림 `Toast`는 `EppToast`를 부르는 얇은 껍데기. 탭 창 제목은 "캡처 보관함".
+- 보관함(이미지·표시·목록)과 띄운 캡처는 `CaptureFiles`로 암호화해서 쓰고 읽는다. 끌어다 놓기·Finder에서 보기는 `exportURL`(임시 평문 사본, 켤 때·끌 때 지움).
 - 저장은 `GrabbyStorage.defaults`·`folder`. 탭 보관함 `<Epp>/Grabby/Captures`, 띄운 캡처 `<Epp>/Grabby/Pins`.
   `AppSettings.shared`는 처음 쓸 때 GrabbyStorage로 만들고, `GrabbyModule.init`이 Epp가 준 저장소로 바꿔 넣는다.
 - 동작 기록(`EventLog`)은 따로 파일을 쓰지 않고 `EppLog.write("캡처", …)`(진단 로그를 켰을 때만).
@@ -213,6 +218,7 @@ Modules/<이름>/     기능 하나 (예: Modules/Keepy)
 - **처음 켤 때**: 켠 기능이 없으면 일반 맨 위에 환영 문구. 일반 목록에서 켜면 쪽이 넘어가지 않고 그 줄에 "설정 열기"가 생긴다.
 - **빠른 검색**: 기능은 `search(_ query: EppSearchQuery) -> [EppSearchResult]`로 맞는 내용을 최근 것부터 돌려준다(잠근 것·비밀은 빼고).
   본체 `QuickSearch`(⌃⌥E, 일반 → 빠른 검색)가 기능마다 6개씩 모아 보여 준다. 창은 앞의 앱을 그대로 두는 패널. 시험: `-debugQuickSearch "말"`.
+- **빠른 검색 명령**: 기능은 `commands(_ query:)`로 바로 실행할 것을 돌려준다(맨 위 "실행" 칸). `query.matchesCommand("이름", …)`, 시간은 `query.duration`.
 - **기능 잇기**: `context.send(EppRequest)`로 다른 기능에 부탁하고 `handle(request:)`로 받는다(예: `.makeSticky(text:)` → 스티커).
   받을 기능이 꺼져 있으면 본체가 그 기능 설정(켜기 버튼)을 연다.
 - **설정 옮기기**: `SettingsBackup`이 본체·기능 UserDefaults를 `.eppsettings`(plist)로 내보내고 가져온다. `NS…`·업데이트 시각 같은 키는 뺀다.

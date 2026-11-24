@@ -105,7 +105,8 @@ private struct IgnoredAppsTab: View {
             } header: {
                 Text(L("이 앱에서 복사한 내용은 기록하지 않아요"))
             } footer: {
-                Text(L("한 줄에 번들 ID 하나씩 적어요. 비밀번호 관리자가 숨김 표시를 붙여 복사한 내용은 앱과 상관없이 기록하지 않아요."))
+                Text(L("한 줄에 번들 ID 하나씩 적어요. 비밀번호 관리자가 숨김 표시를 붙여 복사한 내용은 앱과 상관없이 기록하지 않아요.")
+                     + " " + L("1Password, Bitwarden, Dashlane, LastPass, KeePassXC, Proton Pass 같은 비밀번호 관리자는 목록에 없어도 늘 기록하지 않아요."))
                     .font(.caption).foregroundStyle(.secondary)
             }
 

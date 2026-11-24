@@ -178,5 +178,7 @@ enum SelfTest {
 
         expect(AppSettings.parseBundleIDs(" com.a \n\n com.b\n") == ["com.a", "com.b"], "제외 앱 목록 읽기")
         expect(AppSettings.parseBundleIDs(AppSettings.defaultIgnoredApps).contains("com.apple.keychainaccess"), "기본 제외 앱")
+        first.ignoredApps = ""
+        expect(first.ignoredBundleIDs.contains("com.1password.1password"), "목록을 비워도 비밀번호 관리자는 늘 제외")
     }
 }

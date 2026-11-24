@@ -413,9 +413,14 @@ struct SettingsView: View {
                     if settings.textSearch { CaptureStore.shared.indexText(after: 5) }
                 }
             }
-            Section(L("탭 보관함")) {
+            Section {
                 StorageUsage(folder: CaptureStore.shared.directory)
                 Button(L("캡처 폴더 열기")) { NSWorkspace.shared.open(CaptureStore.shared.directory) }
+            } header: {
+                Text(L("탭 보관함"))
+            } footer: {
+                Text(L("보관함의 캡처는 암호화해서 저장해요. 꺼내려면 탭을 다른 앱으로 끌어다 놓거나 저장(⌘S)하세요."))
+                    .font(.caption).foregroundStyle(.secondary)
             }
         }
         .formStyle(.grouped)

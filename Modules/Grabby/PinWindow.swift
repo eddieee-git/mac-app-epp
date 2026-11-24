@@ -32,11 +32,7 @@ final class PinWindow: NSPanel {
         pin.orderFrontRegardless()
         try? FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
         let url = imageURL(pin.id)
-        DispatchQueue.global(qos: .utility).async {
-            guard let destination = CGImageDestinationCreateWithURL(url as CFURL, "public.png" as CFString, 1, nil) else { return }
-            CGImageDestinationAddImage(destination, image, nil)
-            CGImageDestinationFinalize(destination)
-        }
+        DispatchQueue.global(qos: .utility).async { CaptureFiles.writePNG(image, to: url) }
         saveAll()
     }
 
@@ -55,8 +51,8 @@ final class PinWindow: NSPanel {
     static func restore() {
         guard let data = try? Data(contentsOf: indexURL), let saved = try? JSONDecoder().decode([Saved].self, from: data) else { return }
         for entry in saved {
-            guard let source = CGImageSourceCreateWithURL(imageURL(entry.id) as CFURL, nil),
-                  let image = CGImageSourceCreateImageAtIndex(source, 0, nil) else { continue }
+            guard let image = CaptureFiles.readImage(imageURL(entry.id)) else { continue }
+            CaptureFiles.encryptInPlace(imageURL(entry.id))
             var frame = entry.frame
             if !NSScreen.screens.contains(where: { $0.visibleFrame.intersects(frame) }), let screen = NSScreen.main {
                 frame.origin = CGPoint(x: screen.visibleFrame.midX - frame.width / 2, y: screen.visibleFrame.midY - frame.height / 2)

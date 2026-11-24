@@ -46,6 +46,8 @@ public final class GrabbyModule: NSObject, EppModule {
     private let lastDisplayKey = "lastCaptureDisplay"
 
     public func start() {
+        // 지난번에 끌어다 놓으려고 풀어 둔 사본을 지운다.
+        CaptureFiles.cleanExports()
         // 설정에서 단축키를 바꾸면 바로 다시 등록한다(입력받는 동안에는 EppShortcutRow가 모든 단축키를 잠시 푼다).
         hotKeySubscription = settings.$hotKeys.sink { [weak self] combos in
             self?.registerHotKeys(combos)
@@ -112,6 +114,7 @@ public final class GrabbyModule: NSObject, EppModule {
 
     /// 끄거나 Epp를 끝낼 때: 띄운 캡처·보관함을 저장하고, 창·단축키·타이머를 거둔다.
     public func stop() {
+        CaptureFiles.cleanExports()
         PinWindow.saveAll()
         Clipboard.resolvePending()
         CaptureStore.shared.flush()
@@ -469,6 +472,21 @@ public final class GrabbyModule: NSObject, EppModule {
         HotKeyAction.allCases.compactMap { action in
             settings.hotKeys[action.rawValue].map { EppShortcutInfo(title: action.title, keys: $0.displayText) }
         }
+    }
+
+    /// 빠른 검색 명령: "캡처" → 영역 캡처·전체 화면 캡처·캡처 보관함.
+    public func commands(_ query: EppSearchQuery) -> [EppSearchResult] {
+        guard query.matchesCommand(L("캡처"), L("스크린샷"), "capture", "screenshot") else { return [] }
+        // 검색 창이 사라진 뒤에 찍히도록 조금 기다렸다가 시작한다.
+        return [
+            EppSearchResult(id: "grabby.cmd.area", title: L("영역 캡처"), symbol: "viewfinder") { [weak self] in
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { self?.captureArea() }
+            },
+            EppSearchResult(id: "grabby.cmd.full", title: L("전체 화면 캡처"), symbol: "rectangle.dashed") { [weak self] in
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { self?.captureFullScreen() }
+            },
+            EppSearchResult(id: "grabby.cmd.library", title: L("캡처 보관함…"), symbol: "photo.on.rectangle") { [weak self] in self?.openLibrary() },
+        ]
     }
 
     /// 빠른 검색: 캡처의 메모와 인식한 글자에서 찾는다. 고르면 탭 창에서 그 캡처를 연다.

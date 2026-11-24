@@ -8,6 +8,7 @@ enum Localization {
     static var duplicateKeys: [String] { translations.duplicateKeys }
 
     static let pairs: [(String, String)] = [
+        ("스크린샷", "Screenshot"),
         // Epp
         ("%@로 영역을 골라 캡처하기", "Pick an area and capture it with %@"),
         ("⇧⌘3·4·5는 macOS 스크린샷과 겹쳐요. 단축키 탭에서 ⌃⌘ 묶음으로 바꿀 수 있어요.", "⇧⌘3·4·5 clash with macOS screenshots. You can switch to the ⌃⌘ set in the Shortcuts tab."),
@@ -24,6 +25,7 @@ enum Localization {
         ("화이트보드", "Whiteboard"),
         ("캡처 보관함…", "Capture Library…"),
         ("캡처 보관함", "Capture Library"),
+        ("보관함의 캡처는 암호화해서 저장해요. 꺼내려면 탭을 다른 앱으로 끌어다 놓거나 저장(⌘S)하세요.", "Captures in the library are stored encrypted. To take one out, drag its tab to another app or save it (⌘S)."),
         ("편집", "Edit"),
         ("복사", "Copy"),
         ("저장…", "Save…"),

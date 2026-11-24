@@ -77,6 +77,14 @@ public final class KeepyModule: EppModule {
         if command == "show" { showPanel() } else { EppLog.write("클립보드", "모르는 주소 명령 무시: \(url.path)") }
     }
 
+    /// 빠른 검색 명령: "클립보드" → 기록 창 열기.
+    public func commands(_ query: EppSearchQuery) -> [EppSearchResult] {
+        guard query.matchesCommand(L("클립보드"), "clipboard") else { return [] }
+        return [EppSearchResult(id: "keepy.cmd.show", title: L("클립보드 기록 열기"), symbol: "doc.on.clipboard") { [weak self] in
+            self?.showPanel()
+        }]
+    }
+
     /// 빠른 검색: 글과 파일 경로에서 찾는다. 고르면 앞의 앱에 붙여 넣는다(설정에 따라 복사만).
     public func search(_ query: EppSearchQuery) -> [EppSearchResult] {
         store.items.lazy.filter { $0.kind != .image && query.matches($0.text) }.prefix(30).map { item in

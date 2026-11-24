@@ -21,7 +21,8 @@ public struct EppCrypto: Sendable {
     private let fixedKey: SymmetricKey?
 
     /// service: 키체인 서비스(보통 번들 ID — Epp와 Epp Dev가 따로), account: 기능마다 다른 이름(예: "keepy-history")
-    public init(service: String = Bundle.main.bundleIdentifier ?? "com.eddieee.Epp", account: String) {
+    /// 번들 ID가 없으면(.build/debug/Epp --self-test 등) 실제 Epp 열쇠와 섞이지 않게 따로 둔다.
+    public init(service: String = Bundle.main.bundleIdentifier ?? "com.eddieee.Epp.unbundled", account: String) {
         self.service = service
         self.account = account
         fixedKey = nil
@@ -91,6 +92,34 @@ public struct EppCrypto: Sendable {
         guard added == errSecSuccess else { throw Failure.keychain(added) }
         Self.cache[cacheKey] = key
         return key
+    }
+
+    // MARK: - 백업(데이터 모두 내보내기)
+
+    /// 이 열쇠의 원본 바이트. 없으면 nil. 백업 파일에 넣을 때만 쓰고, 백업 파일은 암호로 다시 암호화한다.
+    public func exportKey() -> Data? {
+        if let fixedKey { return fixedKey.withUnsafeBytes { Data($0) } }
+        return (try? key(createIfMissing: false)).map { $0.withUnsafeBytes { Data($0) } }
+    }
+
+    /// 백업에서 꺼낸 열쇠로 바꾼다(있던 열쇠는 지운다). 새 Mac에서 예전 기록을 열 수 있게 한다.
+    public func importKey(_ data: Data) throws {
+        guard fixedKey == nil, data.count == 32 else { throw Failure.malformed }
+        let match: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: service,
+            kSecAttrAccount as String: account,
+        ]
+        SecItemDelete(match as CFDictionary)
+        var add = match
+        add[kSecValueData as String] = data
+        add[kSecAttrLabel as String] = "Epp \(account)"
+        if let access = Self.makeAccess(label: "Epp \(account)") { add[kSecAttrAccess as String] = access }
+        let status = SecItemAdd(add as CFDictionary, nil)
+        guard status == errSecSuccess else { throw Failure.keychain(status) }
+        Self.lock.lock()
+        Self.cache[service + "/" + account] = SymmetricKey(data: data)
+        Self.lock.unlock()
     }
 
     /// 인증서로 서명돼 있으면 이 앱만, 임시 서명이면 모든 앱(nil 목록)이 묻지 않고 읽는 접근 권한.

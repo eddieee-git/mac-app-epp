@@ -237,7 +237,11 @@ final class AppUpdater: ObservableObject {
         } catch {
             config.log("update check failed: \(error.localizedDescription)")
             // 자동 확인이 실패했을 때는 이미 찾아 둔 새 버전을 잃지 않게 해요. 한 시간 뒤 다시 시도해요.
-            if !userInitiated, case .available = previous { state = previous } else { state = .failed(error.localizedDescription) }
+            // 릴리스가 없거나 저장소가 비공개면 404예요. 고장이 아니라서 쉬운 말로 보여 줘요.
+            let message = error.localizedDescription.contains("(404)")
+                ? text("아직 내려받을 수 있는 버전이 없어요", "No version is available to download yet")
+                : error.localizedDescription
+            if !userInitiated, case .available = previous { state = previous } else { state = .failed(message) }
             if userInitiated { showError(text("업데이트를 확인하지 못했어요", "Couldn't check for updates"), error) }
         }
     }

@@ -5,12 +5,13 @@ import AppKit
 public enum EppLanguage {
     public static let key = "language"
 
-    /// 설정에서 고른 언어. 고르지 않았으면 Mac 언어를 따르고, 한국어가 아니면 영어로 시작한다.
+    /// 설정에서 고른 언어. 고르지 않았으면 Mac 언어 목록에 한국어가 있을 때 한국어, 없으면 영어로 시작한다.
     /// 문구는 시작할 때 한 번 정해지므로 바꾸면 Epp를 다시 열어야 한다.
     /// 켤 때 한 번 정한다. 시험에서만 바꾼다.
     nonisolated(unsafe) public static var isKorean: Bool = {
         if let forced = UserDefaults.standard.string(forKey: key) { return forced.hasPrefix("ko") }
-        return Locale.preferredLanguages.first?.hasPrefix("ko") ?? true
+        // Mac 언어 목록에 한국어가 있으면(첫 번째가 아니어도) 한국어로 시작한다.
+        return Locale.preferredLanguages.isEmpty || Locale.preferredLanguages.contains { $0.hasPrefix("ko") }
     }()
 }
 

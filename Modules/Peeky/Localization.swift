@@ -8,6 +8,9 @@ enum Localization {
     static var duplicateKeys: [String] { translations.duplicateKeys }
 
     static let pairs: [(String, String)] = [
+        ("메뉴바", "Menu Bar"),
+        ("메뉴바 다시 정리", "Rearrange Menu Bar"),
+        ("아이콘 바 열기", "Open Icon Bar"),
         ("일반", "General"),
         // Epp에서 바뀐 문구
         ("아이콘", "Icons"),
@@ -33,6 +36,7 @@ enum Localization {
         ("모두 그룹에", "All to Group"),
         ("모두 그룹에 · %@", "All to Group · %@"),
         ("메뉴바에서 빼는 중이에요 · 마우스가 잠깐 움직여요", "Removing icons from the menu bar · the pointer moves briefly"),
+        ("메뉴바 아이콘을 옮기는 중이에요 · 마우스는 잠깐 그대로 두세요", "Moving menu bar icons · please leave the pointer for a moment"),
         ("숨긴 아이콘이 없어서 메뉴바의 아이콘을 모두 다시 보여 줘요", "No icons are set to Hide, so all menu bar icons are shown again"),
         ("아이콘을 「그룹」이나 「숨기기」로 고르면 저절로 켜지고, 모두 「보이기」로 돌리면 저절로 꺼져요. 정리하는 동안 마우스가 잠깐 움직여요.",
          "Turns on by itself when you set an icon to Group or Hide, and off when every icon is set to Show. The pointer moves briefly while Epp rearranges the menu bar."),

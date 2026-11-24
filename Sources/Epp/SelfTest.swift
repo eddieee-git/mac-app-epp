@@ -60,6 +60,10 @@ enum SelfTest {
         expect(query.matches("오늘 회의", "메모 정리") && !query.matches("오늘 회의"), "낱말이 모두 있어야 맞음(여러 글에 나뉘어도)")
         expect(EppSearchQuery("CAFÉ").matches("cafe 가기"), "대소문자·악센트 무시")
         expect(!EppSearchQuery("   ").matches("아무거나") && EppSearchQuery("").isEmpty, "빈 검색은 아무것도 안 맞음")
+        expect(EppSearchQuery("5분").duration == 300 && EppSearchQuery("1시간 30분").duration == 5400
+               && EppSearchQuery("10m").duration == 600 && EppSearchQuery("회의 메모").duration == nil, "시간 읽기(5분, 1시간 30분, 10m)")
+        expect(EppSearchQuery("캡").matchesCommand("캡처") && EppSearchQuery("새 스티커 장보기").matchesCommand("새 스티커")
+               && !EppSearchQuery("타이").matchesCommand("캡처"), "명령 이름 맞추기")
         expect(EppSearchQuery("메모").snippet(String(repeating: "가", count: 50) + " 메모 끝")?.hasPrefix("…") == true, "찾은 곳 앞뒤만 보여 줌")
 
         print("[Epp] 설정 옮기기")
@@ -104,6 +108,21 @@ enum SelfTest {
         _ = probe
         expect(HotKey.registeredCount == before + 1, "없앤 단축키는 목록에서 빠짐(남은 건 입력 중에 만든 하나)")
         _ = whilePaused
+
+                print("[Epp] 데이터 모두 내보내기")
+        let backup = (try? DataBackup.seal(["format": DataBackup.format, "keys": ["k": Data([1, 2, 3])]], password: "abcdef")) ?? Data()
+        expect(backup.starts(with: DataBackup.magic) && backup.range(of: Data([1, 2, 3])) == nil, "백업 파일은 암호로 잠김")
+        expect((DataBackup.open(backup, password: "abcdef")?["keys"] as? [String: Data])?["k"] == Data([1, 2, 3]), "같은 암호로 엶")
+        expect(DataBackup.open(backup, password: "wrong!") == nil, "틀린 암호로는 못 엶")
+        let zipDir = FileManager.default.temporaryDirectory.appendingPathComponent("epp-zip-\(UUID().uuidString)")
+        try? FileManager.default.createDirectory(at: zipDir.appendingPathComponent("Keepy"), withIntermediateDirectories: true)
+        try? Data("기록".utf8).write(to: zipDir.appendingPathComponent("Keepy/history.json"))
+        let restored = zipDir.appendingPathComponent("restored")
+        if let zipped = try? DataBackup.zip(zipDir.appendingPathComponent("Keepy").deletingLastPathComponent()) {
+            try? DataBackup.unzip(zipped, into: restored)
+        }
+        expect((try? Data(contentsOf: restored.appendingPathComponent("Keepy/history.json"))) == Data("기록".utf8), "폴더를 묶고 그대로 풂")
+        try? FileManager.default.removeItem(at: zipDir)
 
                 var ok = failures == 0
         for type in ModuleList.all {

@@ -8,6 +8,7 @@ enum Localization {
     static var duplicateKeys: [String] { translations.duplicateKeys }
 
     static let pairs: [(String, String)] = [
+        ("새 스티커: %@", "New Sticky: %@"),
         // Epp 시작하기·설정
         ("%@로 새 스티커 만들기", "Make a new sticky with %@"),
         ("%@로 스티커를 모두 숨기고 다시 보이기", "Hide all stickies and show them again with %@"),

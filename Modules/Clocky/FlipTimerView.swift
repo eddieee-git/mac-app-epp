@@ -166,7 +166,19 @@ struct FlipTimerView: View {
         } else if store.mode == .timer {
             timerControls(store.selectedTimer)
         } else if let alarm = store.selectedAlarm {
-            alarmControls(alarm)
+            VStack(spacing: 4) {
+                // 알람에 남긴 메모는 울리지 않을 때도 보여 준다(고치기는 타이머 목록에서).
+                let note = alarm.note.trimmingCharacters(in: .whitespacesAndNewlines)
+                if !note.isEmpty {
+                    Text(note)
+                        .font(.system(size: 11))
+                        .foregroundStyle(.secondary)
+                        .lineLimit(2)
+                        .multilineTextAlignment(.center)
+                        .help(L("메모는 타이머 목록(⌘L)에서 고쳐요"))
+                }
+                alarmControls(alarm)
+            }
         } else {
             Text(L("알람 추가를 눌러 시각을 등록해요"))
                 .font(.system(size: 12))

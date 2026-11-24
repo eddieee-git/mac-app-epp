@@ -4,7 +4,8 @@ import EppKit
 /// 썸네일, 시각, 닫기 버튼이 있는 탭 하나. 다른 앱으로 끌어다 놓으면 이미지 파일이 넘어간다.
 final class CaptureTab: NSView, NSDraggingSource {
     let item: CaptureItem
-    private let fileURL: URL
+    /// 끌어다 놓을 때 만드는 평문 사본(보관함 파일은 암호화돼 있다).
+    private let fileURL: () -> URL?
     private let imageView = NSImageView()
     private let label: NSTextField
     private let star = NSImageView()
@@ -25,7 +26,7 @@ final class CaptureTab: NSView, NSDraggingSource {
 
     var isSelected = false { didSet { applyColors() } }
 
-    init(item: CaptureItem, thumbnail: NSImage?, fileURL: URL) {
+    init(item: CaptureItem, thumbnail: NSImage?, fileURL: @escaping () -> URL?) {
         self.item = item
         self.fileURL = fileURL
         let formatter = DateFormatter()
@@ -134,7 +135,8 @@ final class CaptureTab: NSView, NSDraggingSource {
         let p = event.locationInWindow
         guard hypot(p.x - start.x, p.y - start.y) > 4 else { return }
         mouseDownPoint = nil
-        let dragItem = NSDraggingItem(pasteboardWriter: fileURL as NSURL)
+        guard let url = fileURL() else { return }
+        let dragItem = NSDraggingItem(pasteboardWriter: url as NSURL)
         dragItem.setDraggingFrame(imageView.frame, contents: imageView.image)
         beginDraggingSession(with: [dragItem], event: event, source: self)
     }

@@ -8,6 +8,7 @@ enum Localization {
     static var duplicateKeys: [String] { translations.duplicateKeys }
 
     static let pairs: [(String, String)] = [
+        ("클립보드", "Clipboard"),
         // Epp 공통 설정 틀
         ("손쉬운 사용 권한 허용하기 (Epp 설정 → 일반 → 권한)", "Allow Accessibility (Epp Settings → General → Permissions)"),
         ("권한 열기", "Open Permissions"),
@@ -42,6 +43,7 @@ enum Localization {
         ("서식 없이", "Plain text"),
         ("고정", "Pin"),
         ("스티커로 만들기", "Make Sticky"),
+        ("1Password, Bitwarden, Dashlane, LastPass, KeePassXC, Proton Pass 같은 비밀번호 관리자는 목록에 없어도 늘 기록하지 않아요.", "Password managers such as 1Password, Bitwarden, Dashlane, LastPass, KeePassXC, and Proton Pass are never recorded, even if they aren't in the list."),
         ("고정 풀기", "Unpin"),
         ("삭제", "Delete"),
         ("%ld개", "%ld items"),

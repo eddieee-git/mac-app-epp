@@ -313,7 +313,7 @@ final class LibraryWindowController: NSWindowController, NSWindowDelegate {
     }
 
     private func makeTab(_ item: CaptureItem) -> CaptureTab {
-        let tab = CaptureTab(item: item, thumbnail: store.thumbnail(for: item), fileURL: store.url(for: item))
+        let tab = CaptureTab(item: item, thumbnail: store.thumbnail(for: item), fileURL: { [store] in store.exportURL(for: item) })
         tab.onSelect = { [weak self] in self?.select(item.id) }
         tab.onClose = { [weak self] in self?.delete(item.id) }
         tab.onCloseAll = { [weak self] in self?.closeAllAction() }

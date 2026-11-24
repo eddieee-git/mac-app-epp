@@ -247,6 +247,8 @@ enum Localization {
     static var duplicateKeys: [String] { translations.duplicateKeys }
 
     static let pairs: [(String, String)] = [
+        ("%@ 타이머 시작", "Start %@ Timer"),
+        ("시계", "Clock"),
         // Epp
         ("%@로 시계 창을 열고 타이머 시작하기", "Open the clock with %@ and start a timer"),
         ("(선택) 캘린더 탭에서 일정 연결하기", "(Optional) Connect your calendar in the Calendar tab"),
@@ -368,6 +370,7 @@ enum Localization {
         ("스티커", "Stickies"),
         ("메모", "Note"),
         ("알람이 울릴 때 함께 볼 메모", "A note to see when the alarm rings"),
+        ("메모는 타이머 목록(⌘L)에서 고쳐요", "Edit the note in the timer list (⌘L)"),
         ("기본값으로", "Restore Defaults"),
         ("타이머 목록", "All Timers & Alarms"),
         ("타이머 목록…", "All Timers & Alarms…"),
