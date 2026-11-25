@@ -146,8 +146,11 @@ final class TimerWindowController: NSObject, NSWindowDelegate {
         panel.store = store
         panel.settings = settings
         panel.delegate = self
+        // 항상 위면 모든 데스크톱과 전체 화면 앱 위에도 따라다니고, 끄면 보통 창처럼 한 데스크톱에만 있다(열면 지금 데스크톱으로 온다).
+        // (예전에는 끄더라도 모든 데스크톱·전체 화면에 따라다녀서 핀을 꺼도 계속 위에 있는 것처럼 보였다)
         pinSubscription = store.$isPinned.sink { [weak panel] pinned in
             panel?.level = pinned ? .floating : .normal
+            panel?.collectionBehavior = pinned ? [.canJoinAllSpaces, .fullScreenAuxiliary] : [.moveToActiveSpace]
         }
         return panel
     }
