@@ -1,9 +1,17 @@
-> 이 파일은 mac-app 공통 규칙(`../mac-app/STYLE.md`)을 2026-11-24에 복사한 거예요. Epp 저장소만으로 작업을 이어갈 수 있게 넣어 뒀어요. 아래 링크 중 `templates/release-note.md`는 [docs/templates](templates/release-note.md)에 있고, 나머지(shared/, scripts/, CHECKLIST.md)는 mac-app에만 있어요. Epp에 맞게 다른 점은 Epp의 CLAUDE.md가 우선해요.
+> 이 파일은 mac-app 공통 규칙(`../mac-app/STYLE.md`)을 2026-11-26에 복사한 거예요. Epp 저장소만으로 작업을 이어갈 수 있게 넣어 뒀어요. 아래 링크 중 `templates/release-note.md`는 [docs/templates](templates/release-note.md)에 있고, 나머지(shared/, scripts/, CHECKLIST.md)는 mac-app에만 있어요. Epp에 맞게 다른 점은 Epp의 CLAUDE.md가 우선해요.
 
 # mac-app 공통 규칙
 
-Clocky · Floaty · Gitty · Grabby · Keepy · Peeky가 같은 사람이 만든 한 묶음으로 보이도록 맞추는 규칙이에요.
-기준은 이미 가장 잘 맞아 있는 **Grabby와 Peeky**예요. 규칙과 다르게 해야 할 이유가 있으면 그 앱의 `CLAUDE.md`에 이유를 적어 두세요.
+**Epp · Gitty · Mdy** 세 앱이 같은 사람이 만든 한 묶음으로 보이도록 맞추는 규칙이에요.
+
+| 앱 | 하는 일 | 모양 |
+|---|---|---|
+| [Epp](https://github.com/eddieee-git/mac-app-epp) | 클립보드·메뉴바·스티커·타이머·캡처를 메뉴바 아이콘 하나에 모은 기능 모음 | 메뉴바 앱 |
+| [Gitty](https://github.com/eddieee-git/mac-app-gitty) | Git 저장소를 파일 관리자처럼 다루는 앱 | Dock 앱 |
+| [Mdy](https://github.com/eddieee-git/mac-app-mdy) | 더블클릭으로 바로 여는 마크다운 뷰어 겸 편집기 | Dock 앱 |
+
+세 앱 모두 이 규칙을 따르고, 다르게 해야 할 이유가 있으면 그 앱의 `CLAUDE.md`에 이유를 적어 두세요.
+Epp는 이 문서의 복사본을 `docs/STYLE.md`에 두고 따라요(이 문서를 고치면 그쪽에도 복사해요. 9절).
 
 - 문서 틀: [templates/](templates)
 - 앱별로 지금 어긋난 곳: [CHECKLIST.md](CHECKLIST.md)
@@ -14,11 +22,11 @@ Clocky · Floaty · Gitty · Grabby · Keepy · Peeky가 같은 사람이 만든
 
 | 항목 | 규칙 | 예 |
 |---|---|---|
-| 앱 이름 | 영어 한 단어, `-y`로 끝남 | Peeky |
-| 저장소 | `eddieee-git/mac-app-<소문자 이름>` | `mac-app-peeky` |
-| 번들 ID | `com.eddieee.<이름>` | `com.eddieee.Peeky` |
+| 앱 이름 | 짧은 영어 한 단어 | Gitty, Mdy, Epp |
+| 저장소 | `eddieee-git/mac-app-<소문자 이름>` | `mac-app-gitty` |
+| 번들 ID | `com.eddieee.<이름>` | `com.eddieee.Gitty` |
 | 버전 | `0.x.y`. 새 기능은 x, 고친 것만 있으면 y | 0.2.0 → 0.2.1 |
-| 배포 파일 | `<이름>-<버전>.dmg`, 서명 `<이름>-<버전>.dmg.sig` | `Peeky-0.2.0.dmg` |
+| 배포 파일 | `<이름>-<버전>.dmg`, 서명 `<이름>-<버전>.dmg.sig` | `Gitty-0.2.3.dmg` |
 | 태그 | `v<버전>` | `v0.2.0` |
 | 다른 앱 링크 | 항상 `https://github.com/eddieee-git/mac-app-<이름>` 전체 주소로 | |
 
@@ -32,11 +40,11 @@ CHANGELOG.en.md      영어 변경 기록
 LICENSE              MIT
 SECURITY.md          보안 문제 알리는 곳
 CLAUDE.md            작업 규칙. 첫 줄에 이 문서를 가리키는 링크
-.github/ISSUE_TEMPLATE/  bug.md, feature.md, config.yml  (Clocky 것을 기준으로)
-docs/images/         icon.png, 스크린샷 (영어판은 이름 뒤에 .en: timer.png / timer.en.png)
+.github/ISSUE_TEMPLATE/  bug.md, feature.md, config.yml  (scripts/apply-common-docs.py가 만들어요)
+docs/images/         icon.png, 스크린샷 (영어판은 이름 뒤에 .en: main.png / main.en.png)
 docs/releases/       vX.Y.Z.md — GitHub 릴리스 본문 (한국어 + 맨 아래 English)
 scripts/             build-app.sh, test.sh, release.sh, make-icon.swift, sign-update.swift
-Sources/<이름>/AppUpdater.swift, AppAbout.swift   공통 파일. mac-app/shared가 원본 (아래 9절)
+Sources/<이름>/AppUpdater.swift, AppAbout.swift   공통 파일. mac-app/shared가 원본 (아래 9절. Epp는 AppUpdater만)
 Package.swift        SwiftPM. Xcode 프로젝트 없이 빌드
 ```
 
@@ -45,6 +53,8 @@ Package.swift        SwiftPM. Xcode 프로젝트 없이 빌드
 ```markdown
 > 문서·UI 규칙은 ../mac-app/STYLE.md를 따른다. 다르게 할 때는 여기에 이유를 적는다.
 ```
+
+Epp는 저장소만으로 작업을 이어갈 수 있게 복사본 `docs/STYLE.md`를 가리켜요. Epp README는 기능이 여러 개라 "들어 있는 기능" 표로 시작하는 자기 모양을 써요(Epp CLAUDE.md).
 
 ## 3. 글쓰기
 
@@ -149,7 +159,7 @@ Package.swift        SwiftPM. Xcode 프로젝트 없이 빌드
 
 ## 6. 앱 화면 (UI)
 
-### 메뉴바 메뉴 (메뉴바 앱)
+### 메뉴바 메뉴 (메뉴바 앱: Epp)
 
 ```
 [앱 고유 항목 …]
@@ -164,7 +174,7 @@ Package.swift        SwiftPM. Xcode 프로젝트 없이 빌드
 - 종료 항목 이름은 항상 `<이름> 종료`.
 - 메뉴바 아이콘은 SF Symbol 또는 템플릿 이미지(밝은·어두운 메뉴바에서 다 보여야 해요).
 
-### 앱 메뉴 (Dock 앱: Gitty)
+### 앱 메뉴 (Dock 앱: Gitty, Mdy)
 
 ```
 <이름>에 관하여
@@ -190,7 +200,7 @@ Package.swift        SwiftPM. Xcode 프로젝트 없이 빌드
   - 로그인 시 실행
   - 언어: 시스템 / 한국어 / English (기본 시스템)
   - 업데이트 섹션 (아래)
-- **정보** 탭: 아이콘, 이름, 버전, GitHub · 변경 기록 · 문제 알리기 링크, 다른 앱 목록. 공통 `AppAboutSections`를 `Form`에 넣어요. 한 장짜리 설정은 맨 아래에 넣어요.
+- **정보** 탭: 아이콘, 이름, 버전, GitHub · 변경 기록 · 문제 알리기 링크, 다른 앱 목록. 공통 `AppAboutSections`를 `Form`에 넣어요. 한 장짜리 설정은 맨 아래에 넣어요(Gitty, Mdy). Epp는 공통 파일을 쓰지 않고 자기 정보 화면을 써요.
 - 권한이 필요한 앱은 권한 줄마다 상태를 색으로: 허용됨 초록 / 필요 주황, 옆에 **허용하기** 버튼.
 
 ### 업데이트 (모든 앱 같은 방식)
@@ -205,12 +215,11 @@ Package.swift        SwiftPM. Xcode 프로젝트 없이 빌드
 - 코드는 공통 파일 `AppUpdater.swift` 하나예요(9절). 설정 칸은 `AppUpdaterSection`, 메뉴 항목은 `AppUpdater.shared.makeMenuItem()`을 써요.
 - 자동 설치는 앱을 앞에 두고 쓰고 있지 않을 때만 해요(쓰다가 다른 앱으로 넘어가면 그때, 아니면 한 시간마다 다시 봐요).
 - 사용자가 직접 확인하거나 "새 버전 X 설치…"를 누르면 **묻는 창 없이 바로** 받아 바꿔 넣고 다시 켜요. 창은 앱 안에서 설치할 수 없을 때(자동 설치를 껐거나, 바꿔 넣을 수 없는 위치이거나, 서명 없는 릴리스)만 띄우고, 자동 확인에서는 버전마다 한 번만 띄워요.
-- **Clocky**: 0.2.x는 앱 샌드박스라 dmg를 받아 열어 주기만 했어요. 0.3.0부터 샌드박스를 끄고 다른 앱과 같이 바꿔 넣어요(자동 설치 설정도 같아요).
 
 ### 언어
 
-- 문구는 한국어 원문을 키로 쓰는 `L("…")` 하나로 통일 (`tr(…)`, `NSLocalizedString` 안 씀).
-- 영어 번역은 `Localization.swift`의 사전 하나에. 빠진 번역이 있으면 `test.sh`가 실패해요.
+- 문구는 한국어 원문을 키로 써요. Epp는 `L("…")`, Gitty·Mdy는 `tr("…")`(끼워 넣는 값을 문자열 보간으로 쓰는 방식)이에요. `NSLocalizedString`은 쓰지 않아요.
+- 영어 번역은 사전 하나에 모아요(Epp `Localization.swift`, Gitty·Mdy `Resources/en.json`). 빠진 번역이 있으면 `test.sh`가 실패해요.
 - 처음 실행 때는 시스템 언어를 따라요. 한국어가 아니면 영어.
 
 ### 처음 실행
@@ -237,7 +246,7 @@ Package.swift        SwiftPM. Xcode 프로젝트 없이 빌드
 
 ## 7. 지원 환경과 빌드
 
-- 기본: **Apple 실리콘, macOS 14 이상**. 다르게 지원하는 앱은 README 설치 맨 앞 줄에 정확히 적어요(Clocky·Floaty는 macOS 13 이상, Gitty는 Intel도 지원).
+- 기본: **Apple 실리콘, macOS 14 이상**. 다르게 지원하는 앱은 README 설치 맨 앞 줄에 정확히 적어요(Gitty·Mdy는 Intel Mac도 지원).
 - 빌드는 `./scripts/build-app.sh` 하나로 `build/<이름>.app`과 `build/<이름>-<버전>.dmg`가 나와요.
 - 점검은 `./scripts/test.sh`, 릴리스는 `./scripts/release.sh <버전>`. 이 이름과 사용법은 모든 앱이 같아요.
 - Apple 공증은 하지 않아요. 그래서 README·릴리스 노트에 첫 실행 경고 안내를 항상 넣어요.
@@ -247,18 +256,19 @@ Package.swift        SwiftPM. Xcode 프로젝트 없이 빌드
 > **어떤 정보를 보내나요?**
 > 업데이트 확인 때 GitHub 공개 API에 최신 릴리스를 묻는 요청 하나만 보내요. <앱이 다루는 내용>은 어디에도 보내지 않아요. 설정에서 자동 확인을 끄면 그것도 보내지 않아요.
 
-외부와 더 통신하는 앱(Gitty의 git push, Clocky의 iCal 주소)은 그 내용을 이 답에 덧붙여요.
+외부와 더 통신하는 앱(Gitty의 git push, Epp 타이머의 iCal 주소, Mdy 문서의 외부 이미지)은 그 내용을 이 답에 덧붙여요.
 
 ## 9. 공통 파일과 스크립트
 
 | 파일 | 하는 일 |
 |---|---|
 | [shared/AppUpdater.swift](shared/AppUpdater.swift) | 업데이트 확인·내려받기·확인·바꿔 넣기, 설정의 업데이트 칸, 메뉴 항목 |
-| [shared/AppAbout.swift](shared/AppAbout.swift) | 설정의 정보 칸과 다른 앱 목록 |
-| [scripts/sync-shared.sh](scripts/sync-shared.sh) | `shared/*.swift`를 모든 앱(또는 이름을 준 앱)에 복사. `--check`는 다르면 실패 |
-| [scripts/apply-common-docs.py](scripts/apply-common-docs.py) | SECURITY.md, 이슈 양식, README의 "다른 앱", CLAUDE.md 첫 줄을 모든 앱(또는 이름을 준 앱)에 만들기 |
+| [shared/AppAbout.swift](shared/AppAbout.swift) | 설정의 정보 칸과 다른 앱 목록 (Gitty, Mdy) |
+| [scripts/sync-shared.sh](scripts/sync-shared.sh) | `shared/*.swift`를 세 앱(또는 이름을 준 앱)에 복사. Epp에는 `AppUpdater.swift`만. `--check`는 다르면 실패 |
+| [scripts/apply-common-docs.py](scripts/apply-common-docs.py) | SECURITY.md, 이슈 양식, README의 "다른 앱", CLAUDE.md 첫 줄을 Gitty·Mdy(또는 이름을 준 앱)에 만들기. Epp 문서는 건드리지 않아요 |
 | [scripts/e2e-update-test.sh](scripts/e2e-update-test.sh) | 시험용 앱으로 자동 확인 → 내려받기 → 서명 확인 → 바꿔 넣기 → 다시 켜기를 끝까지 확인 |
 
-- 공통 파일은 **앱 저장소에서 고치지 않아요.** `shared/`에서 고치고 `sync-shared.sh`를 돌린 뒤, 모든 앱의 `test.sh`와 `e2e-update-test.sh`를 돌려요.
+- 공통 파일은 **앱 저장소에서 고치지 않아요.** `shared/`에서 고치고 `sync-shared.sh`를 돌린 뒤, 세 앱의 `test.sh`와 `e2e-update-test.sh`를 돌려요.
 - 앱마다 다른 값(이름, 저장소, 서명 키, 설치 방식)은 각 앱의 `UpdaterSetup.swift`에만 둬요.
-- 앱이 늘거나 소개 문구가 바뀌면 `shared/AppAbout.swift`의 `AppFamily.members`와 `apply-common-docs.py`의 `APPS`를 함께 고쳐요.
+- 앱이 늘거나 소개 문구가 바뀌면 `shared/AppAbout.swift`의 `AppFamily.members`, `apply-common-docs.py`의 `APPS`, `templates/more-apps.md`를 함께 고쳐요.
+- 이 문서(STYLE.md)를 고치면 `../Epp/docs/STYLE.md`에도 복사해요. 그 파일 맨 위의 "복사본" 안내 줄은 남기고 날짜만 바꿔요.

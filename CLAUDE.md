@@ -40,7 +40,7 @@ swift scripts/sign-update.swift public  # 업데이트 서명 키의 공개 키 
 ## 업데이트·릴리스
 
 - 업데이트 코드 `Sources/Epp/AppUpdater.swift`는 `../mac-app/shared/AppUpdater.swift` 복사본이다(Gitty와 같이 쓰는 원본). 되도록 여기서 고치지 않는다.
-  mac-app이 있는 Mac에서 원본이 바뀌면 다시 복사한다(`cp ../mac-app/shared/AppUpdater.swift Sources/Epp/`). 없으면 여기 것이 기준. Epp 값은 `UpdaterSetup.swift`에만.
+  mac-app이 있는 Mac에서 원본이 바뀌면 다시 복사한다(`../mac-app/scripts/sync-shared.sh Epp`). 없으면 여기 것이 기준. Epp 값은 `UpdaterSetup.swift`에만.
 - 하루 한 번 GitHub(`eddieee-git/mac-app-epp`) 최신 릴리스를 묻고, 기본은 Epp를 쓰지 않을 때 알아서 설치한다.
   설정 → 일반 → 업데이트, 메뉴의 "업데이트 확인…". **저장소가 비공개인 동안에는 릴리스를 찾지 못한다**(공개 API라서).
 - 디버그 빌드(Epp Dev)는 `-debugUpdateURL`을 줬을 때만 확인한다(`AppUpdater.shouldRun`).
@@ -249,4 +249,4 @@ Modules/<이름>/     기능 하나 (예: Modules/Keepy)
 - [x] 첫 릴리스 v0.1.0(2026-11-25): 저장소 공개, GitHub 릴리스, dmg SHA-256 확인함. 다음 버전부터 앱 안 자동 업데이트가 동작한다.
 - [ ] 옛 단독 앱 정리: 릴리스 뒤 **사용자가 따로 말하면** 옛 저장소 5개·설치된 앱·코드 폴더를 지운다(그전에는 건드리지 않는다).
   앞으로는 Epp 하나로 관리한다. 옛 앱 데이터 가져오기는 만들지 않는다(사용자 혼자 쓰므로 필요 없다고 했다. 2026-11-23).
-- [ ] `../mac-app/scripts/sync-shared.sh`가 Epp에도 AppUpdater를 복사하게 하기(지금은 손으로 복사)
+- [x] `../mac-app/scripts/sync-shared.sh`가 Epp에도 AppUpdater를 복사하게 하기(2026-11-26. `../mac-app/scripts/sync-shared.sh Epp`)
