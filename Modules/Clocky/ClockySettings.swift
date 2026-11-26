@@ -250,6 +250,18 @@ enum Localization {
     static var duplicateKeys: [String] { translations.duplicateKeys }
 
     static let pairs: [(String, String)] = [
+        ("랩", "Lap"),
+        ("랩 %d", "Lap %d"),
+        ("랩 %d개", "%d laps"),
+        ("멈춤", "Stop"),
+        ("스톱워치", "Stopwatch"),
+        ("스톱워치 %@", "Stopwatch %@"),
+        ("스톱워치 계속", "Resume Stopwatch"),
+        ("스톱워치 멈춤", "Stop Stopwatch"),
+        ("스톱워치 멈춤 (%@)", "Stop Stopwatch (%@)"),
+        ("스톱워치 시작", "Start Stopwatch"),
+        ("재는 동안 랩을 누르면 구간 시간이 여기에 쌓여요", "Press Lap while timing to collect split times here"),
+        ("지금까지의 시간을 남겨요", "Record the time so far"),
         ("접기", "Collapse"),
         ("펼치기", "Expand"),
         ("%@ 타이머 시작", "Start %@ Timer"),

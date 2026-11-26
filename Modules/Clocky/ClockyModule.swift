@@ -139,6 +139,10 @@ public final class ClockyModule: NSObject, EppModule, NSMenuDelegate {
         } else if let paused, settings.menuBarShowsTimer {
             title = " " + clockText(paused.remaining(at: now))
         }
+        // 타이머·알람이 없을 때 재고 있는 스톱워치를 보여 준다.
+        if title.isEmpty, store.stopwatchRunning, settings.menuBarShowsTimer {
+            title = " ⏱" + clockText(Int(store.stopwatchElapsed(at: now)))
+        }
         guard !title.isEmpty else {
             context.setStatusText(nil)
             return removeStatusItem()
@@ -201,7 +205,17 @@ public final class ClockyModule: NSObject, EppModule, NSMenuDelegate {
             item.representedObject = line.1
         }
         menu.addItem(.separator())
+        let stopwatch = window.store
+        menu.addItem(withTitle: stopwatch.stopwatchRunning
+                        ? L("스톱워치 멈춤 (%@)", clockText(Int(stopwatch.stopwatchElapsed())))
+                        : (stopwatch.stopwatchInUse ? L("스톱워치 계속") : L("스톱워치 시작")),
+                     action: #selector(toggleStopwatchFromMenu), keyEquivalent: "").target = self
         menu.addItem(withTitle: L("타이머 목록…"), action: #selector(showList), keyEquivalent: "").target = self
+    }
+
+    @objc private func toggleStopwatchFromMenu() {
+        window.store.toggleStopwatch()
+        if window.store.stopwatchRunning { window.store.mode = .stopwatch }
     }
 
     private func statusLines() -> [(String, String)] {
@@ -333,6 +347,17 @@ public final class ClockyModule: NSObject, EppModule, NSMenuDelegate {
                 store.setDuration(id, seconds)
                 store.selectedTimerID = id
                 store.start(id)
+                self.window.show(takeFocus: false)
+            })
+        }
+        if query.matchesCommand(L("스톱워치"), "stopwatch") {
+            let store = window.store
+            results.append(EppSearchResult(id: "clocky.cmd.stopwatch",
+                                           title: store.stopwatchRunning ? L("스톱워치 멈춤") : L("스톱워치 시작"),
+                                           symbol: "stopwatch") { [weak self] in
+                guard let self else { return }
+                self.window.store.toggleStopwatch()
+                self.window.store.mode = .stopwatch
                 self.window.show(takeFocus: false)
             })
         }

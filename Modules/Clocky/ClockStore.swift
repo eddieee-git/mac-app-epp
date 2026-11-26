@@ -117,7 +117,7 @@ struct AlarmItem: Identifiable, Equatable {
 /// 타이머 여러 개와 알람 여러 개를 함께 돌린다.
 /// 창에서 타이머·알람 중 무엇을 보여 줄지(`mode`)는 화면만 바꾸고, 도는 타이머에는 손대지 않는다.
 final class ClockStore: ObservableObject {
-    enum Mode: String { case timer, alarm }
+    enum Mode: String { case timer, alarm, stopwatch }
 
     static let defaultDuration = 5 * 60
     static let maxDuration = 100 * 3600 - 1
@@ -133,6 +133,7 @@ final class ClockStore: ObservableObject {
 
     private enum Keys {
         static let mode = "timerMode", pinned = "timerPinned", timers = "timers", alarms = "alarms"
+        static let stopwatchStart = "stopwatchStart", stopwatchAccumulated = "stopwatchAccumulated", stopwatchLaps = "stopwatchLaps"
         static let eventsFired = "calendarFired", eventsSkipped = "calendarSkipped", eventSnoozes = "calendarSnoozes"
         // 타이머·알람이 하나씩이던 때의 값. 처음 실행할 때 첫 항목으로 옮기고 지운다.
         static let name = "timerName", duration = "timerDuration"
@@ -204,6 +205,55 @@ final class ClockStore: ObservableObject {
     @Published var selectedAlarmID: UUID?
     @Published private(set) var ringingAlarmIDs: Set<UUID> = []
 
+    // MARK: 스톱워치
+    /// 지금 재는 중이면 다시 시작한 때(벽시계). 멈춰 있으면 nil. 앱을 다시 켜도 이어서 잰다.
+    @Published private(set) var stopwatchStart: Date? {
+        didSet { defaults.set(stopwatchStart?.timeIntervalSince1970, forKey: Keys.stopwatchStart); scheduleTick() }
+    }
+    /// 멈추기 전까지 잰 시간(초).
+    @Published private(set) var stopwatchAccumulated: TimeInterval = 0 {
+        didSet { defaults.set(stopwatchAccumulated, forKey: Keys.stopwatchAccumulated) }
+    }
+    /// 랩을 누른 때까지의 전체 시간(초), 먼저 누른 것부터.
+    @Published private(set) var laps: [TimeInterval] = [] { didSet { defaults.set(laps, forKey: Keys.stopwatchLaps) } }
+
+    var stopwatchRunning: Bool { stopwatchStart != nil }
+
+    func stopwatchElapsed(at date: Date = Date()) -> TimeInterval {
+        stopwatchAccumulated + (stopwatchStart.map { max(0, date.timeIntervalSince($0)) } ?? 0)
+    }
+
+    func startStopwatch() {
+        guard stopwatchStart == nil else { return }
+        stopwatchStart = Date()
+        now = Date()
+    }
+
+    func pauseStopwatch() {
+        guard let start = stopwatchStart else { return }
+        stopwatchAccumulated += max(0, Date().timeIntervalSince(start))
+        stopwatchStart = nil
+        now = Date()
+    }
+
+    func toggleStopwatch() { stopwatchRunning ? pauseStopwatch() : startStopwatch() }
+
+    /// 지금까지의 시간을 랩으로 남긴다(재는 중일 때만).
+    func lapStopwatch() {
+        guard stopwatchRunning else { return }
+        laps.append(stopwatchElapsed())
+    }
+
+    func resetStopwatch() {
+        stopwatchStart = nil
+        stopwatchAccumulated = 0
+        laps = []
+        now = Date()
+    }
+
+    /// 스톱워치가 0이 아니면(재는 중이거나 멈춰 둔 시간이 있으면)
+    var stopwatchInUse: Bool { stopwatchRunning || stopwatchAccumulated > 0 }
+
     // MARK: 캘린더 일정
     /// 앞으로 이틀 안의 일정. 캘린더 동기화가 넣어 준다.
     @Published private(set) var calendarEvents: [CalendarEvent] = []
@@ -256,6 +306,9 @@ final class ClockStore: ObservableObject {
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
         mode = defaults.string(forKey: Keys.mode).flatMap(Mode.init) ?? .timer
+        stopwatchStart = (defaults.object(forKey: Keys.stopwatchStart) as? Double).map { Date(timeIntervalSince1970: $0) }
+        stopwatchAccumulated = defaults.double(forKey: Keys.stopwatchAccumulated)
+        laps = defaults.array(forKey: Keys.stopwatchLaps) as? [Double] ?? []
         isPinned = defaults.object(forKey: Keys.pinned) as? Bool ?? true
         let start = Date()
 
@@ -502,6 +555,9 @@ final class ClockStore: ObservableObject {
         case .alarm:
             let c = Calendar.current.dateComponents([.hour, .minute, .second], from: now)
             return [c.hour ?? 0, c.minute ?? 0, c.second ?? 0]
+        case .stopwatch:
+            let s = Int(stopwatchElapsed(at: now))
+            return [s / 3600, s / 60 % 60, s % 60]
         }
     }
 
@@ -824,6 +880,8 @@ final class ClockStore: ObservableObject {
             toggle(selectedTimerID)
         case .alarm:
             if let alarm = selectedAlarm { setAlarmEnabled(alarm.id, !alarm.enabled) }
+        case .stopwatch:
+            toggleStopwatch()
         }
     }
 
@@ -837,17 +895,24 @@ final class ClockStore: ObservableObject {
             guard !alarms.isEmpty else { return }
             let index = alarms.firstIndex { $0.id == selectedAlarmID } ?? (offset > 0 ? -1 : alarms.count)
             selectedAlarmID = alarms[max(0, min(alarms.count - 1, index + offset))].id
+        case .stopwatch:
+            break
         }
     }
 
     func addItem() {
-        if mode == .timer { addTimer() } else { addAlarm() }
+        switch mode {
+        case .timer: addTimer()
+        case .alarm: addAlarm()
+        case .stopwatch: lapStopwatch()
+        }
     }
 
     func removeSelected() {
         switch mode {
         case .timer: removeTimer(selectedTimerID)
         case .alarm: if let id = selectedAlarmID { removeAlarm(id) }
+        case .stopwatch: resetStopwatch()
         }
     }
 
@@ -944,6 +1009,8 @@ final class ClockStore: ObservableObject {
             dates.append(next.addingTimeInterval(-Self.keepAwakeWindow))
         }
         if isListDisplayed { dates.append(nextSecond) }
+        // 스톱워치는 재는 동안 초마다(숫자판과 메뉴바의 시간).
+        if stopwatchRunning { dates.append(nextSecond) }
         if isDisplayed {
             // 알람 칸은 지금 시각과 남은 시간을 보여 준다.
             if mode == .alarm { dates.append(nextSecond) }

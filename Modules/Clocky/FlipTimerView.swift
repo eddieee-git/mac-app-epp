@@ -34,6 +34,12 @@ struct FlipTimerView: View {
             return L("%@, %@ 남음", store.displayName(of: item), parts.joined(separator: " "))
         case .alarm:
             return L("지금 시각 %@", settings.timeText(store.now))
+        case .stopwatch:
+            var parts: [String] = []
+            if units[0] > 0 { parts.append(L("%d시간", units[0])) }
+            if units[1] > 0 { parts.append(L("%d분", units[1])) }
+            parts.append(L("%d초", units[2]))
+            return L("스톱워치 %@", parts.joined(separator: " "))
         }
     }
 
@@ -79,6 +85,7 @@ struct FlipTimerView: View {
         switch store.mode {
         case .timer: return store.displayName(of: store.selectedTimer)
         case .alarm: return store.selectedAlarm.map { store.displayName(of: $0) } ?? L("알람")
+        case .stopwatch: return L("스톱워치")
         }
     }
 
@@ -94,6 +101,13 @@ struct FlipTimerView: View {
         if store.isRinging {
             Button(L("끄기")) { store.stopRinging() }
                 .controlSize(.small)
+        } else if store.mode == .stopwatch {
+            Button { store.toggleStopwatch() } label: {
+                Image(systemName: store.stopwatchRunning ? "pause.fill" : "play.fill")
+            }
+            .buttonStyle(.borderless)
+            .help(store.stopwatchRunning ? L("멈춤") : L("시작"))
+            .accessibilityLabel(store.stopwatchRunning ? L("멈춤") : L("시작"))
         } else if store.mode == .timer {
             let item = store.selectedTimer
             Button {
@@ -116,7 +130,7 @@ struct FlipTimerView: View {
                     .textFieldStyle(.plain)
                     .font(.system(size: 14, weight: .semibold))
                     .multilineTextAlignment(.center)
-                    .disabled(store.mode == .alarm && store.selectedAlarm == nil)
+                    .disabled(store.mode == .stopwatch || (store.mode == .alarm && store.selectedAlarm == nil))
                     // 고른 항목이 바뀌면 칸을 새로 만들어, 고치던 글자가 다른 항목에 들어가지 않게 한다.
                     .id(selectionKey)
                 HStack(spacing: 6) {
@@ -141,10 +155,11 @@ struct FlipTimerView: View {
             Picker("", selection: $store.mode) {
                 Text(L("타이머")).tag(ClockStore.Mode.timer)
                 Text(L("알람")).tag(ClockStore.Mode.alarm)
+                Text(L("스톱워치")).tag(ClockStore.Mode.stopwatch)
             }
             .pickerStyle(.segmented)
             .labelsHidden()
-            .frame(width: 180)
+            .frame(width: 260)
 
             HStack(spacing: 6) {
                 let units = store.displayedUnits
@@ -186,7 +201,11 @@ struct FlipTimerView: View {
     }
 
     private var selectionKey: String {
-        store.mode == .timer ? "timer-\(store.selectedTimerID)" : "alarm-\(store.selectedAlarmID?.uuidString ?? "")"
+        switch store.mode {
+        case .timer: return "timer-\(store.selectedTimerID)"
+        case .alarm: return "alarm-\(store.selectedAlarmID?.uuidString ?? "")"
+        case .stopwatch: return "stopwatch"
+        }
     }
 
     /// 이름을 비워 두면 목록에서 부르는 이름이 흐리게 보인다.
@@ -194,6 +213,7 @@ struct FlipTimerView: View {
         switch store.mode {
         case .timer: return store.displayName(of: store.selectedTimer)
         case .alarm: return store.selectedAlarm.map { store.displayName(of: $0) } ?? L("이름")
+        case .stopwatch: return L("스톱워치")
         }
     }
 
@@ -205,6 +225,8 @@ struct FlipTimerView: View {
         case .alarm:
             guard let id = store.selectedAlarmID else { return .constant("") }
             return Binding(get: { store.selectedAlarm?.name ?? "" }, set: { store.renameAlarm(id, to: $0) })
+        case .stopwatch:
+            return .constant("")
         }
     }
 
@@ -239,6 +261,8 @@ struct FlipTimerView: View {
                         .foregroundStyle(.secondary)
                 }
             }
+        } else if store.mode == .stopwatch {
+            stopwatchControls
         } else if store.mode == .timer {
             timerControls(store.selectedTimer)
         } else if let alarm = store.selectedAlarm {
@@ -287,6 +311,20 @@ struct FlipTimerView: View {
                 }
                 Button(L("초기화")) { store.reset(item.id) }
             }
+        }
+    }
+
+    private var stopwatchControls: some View {
+        HStack(spacing: 8) {
+            Button(store.stopwatchRunning ? L("멈춤") : (store.stopwatchInUse ? L("계속") : L("시작"))) {
+                store.toggleStopwatch()
+            }
+            .keyboardShortcut(.defaultAction)
+            Button(L("랩")) { store.lapStopwatch() }
+                .disabled(!store.stopwatchRunning)
+                .help(L("지금까지의 시간을 남겨요"))
+            Button(L("초기화")) { store.resetStopwatch() }
+                .disabled(!store.stopwatchInUse)
         }
     }
 
@@ -412,17 +450,19 @@ struct FlipTimerView: View {
     private var list: some View {
         VStack(spacing: 4) {
             HStack {
-                Text(store.mode == .timer ? L("타이머 %d개", store.timers.count) : L("알람 %d개", store.alarms.count))
+                Text(listTitle)
                     .font(.system(size: 11))
                     .foregroundStyle(.secondary)
                 Spacer()
-                Button {
-                    if store.mode == .timer { store.addTimer() } else { store.addAlarm() }
-                } label: {
-                    Label(store.mode == .timer ? L("타이머 추가") : L("알람 추가"), systemImage: "plus")
-                        .font(.system(size: 12))
+                if store.mode != .stopwatch {
+                    Button {
+                        if store.mode == .timer { store.addTimer() } else { store.addAlarm() }
+                    } label: {
+                        Label(store.mode == .timer ? L("타이머 추가") : L("알람 추가"), systemImage: "plus")
+                            .font(.system(size: 12))
+                    }
+                    .buttonStyle(.borderless)
                 }
-                .buttonStyle(.borderless)
                 Button { onOpenList?() } label: { Image(systemName: "list.bullet") }
                     .buttonStyle(.borderless)
                     .help(L("타이머 목록 (⌘L)"))
@@ -436,7 +476,9 @@ struct FlipTimerView: View {
             ScrollViewReader { proxy in
                 ScrollView {
                     LazyVStack(spacing: 2) {
-                        if store.mode == .timer {
+                        if store.mode == .stopwatch {
+                            lapRows
+                        } else if store.mode == .timer {
                             ForEach(store.timers) { timerRow($0).id($0.id) }
                         } else {
                             if store.alarms.isEmpty && todayEvents.isEmpty {
@@ -465,6 +507,45 @@ struct FlipTimerView: View {
                 }
             }
         }
+    }
+
+    private var listTitle: String {
+        switch store.mode {
+        case .timer: return L("타이머 %d개", store.timers.count)
+        case .alarm: return L("알람 %d개", store.alarms.count)
+        case .stopwatch: return L("랩 %d개", store.laps.count)
+        }
+    }
+
+    /// 랩: 최근 것부터. 그 랩의 시간(앞 랩부터)과 전체 시간.
+    @ViewBuilder
+    private var lapRows: some View {
+        if store.laps.isEmpty {
+            Text(L("재는 동안 랩을 누르면 구간 시간이 여기에 쌓여요"))
+                .font(.system(size: 12))
+                .foregroundStyle(.secondary)
+                .padding(.top, 20)
+        }
+        ForEach(Array(store.laps.enumerated().reversed()), id: \.offset) { index, total in
+            let split = total - (index > 0 ? store.laps[index - 1] : 0)
+            HStack {
+                Text(L("랩 %d", index + 1)).font(.system(size: 12, weight: .medium))
+                Spacer()
+                Text(lapText(split)).font(.system(size: 12, weight: .semibold)).monospacedDigit()
+                Text(lapText(total)).font(.system(size: 11)).foregroundStyle(.secondary).monospacedDigit()
+                    .frame(width: 80, alignment: .trailing)
+            }
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
+        }
+    }
+
+    /// 1:02.3 또는 1:02:03.4(한 시간이 넘으면)
+    private func lapText(_ seconds: TimeInterval) -> String {
+        let tenths = Int((seconds * 10).rounded(.down))
+        let s = tenths / 10, t = tenths % 10
+        return s >= 3600 ? String(format: "%d:%02d:%02d.%d", s / 3600, s / 60 % 60, s % 60, t)
+            : String(format: "%d:%02d.%d", s / 60, s % 60, t)
     }
 
     private func timerRow(_ item: TimerItem) -> some View {

@@ -170,6 +170,7 @@ Modules/<이름>/     기능 하나 (예: Modules/Keepy)
   Mac 캘린더를 켤 때 묻는 흐름(캘린더 탭)은 그대로 둔다.
 - 단위 시험은 `Tests/ClockyTests`(Swift Testing). `scripts/test.sh`가 Command Line Tools 경로를 알려 주고 `swift test`로 돌린다.
   옛 GUI 시험(Tests/GUI, gui-test.sh)과 업데이트·샌드박스 시험은 가져오지 않았다.
+- 스톱워치(모드 `.stopwatch`): `stopwatchStart`(벽시계)·`stopwatchAccumulated`·`laps`를 저장해 다시 켜도 이어서 잰다. 재는 동안 초마다 깨어나고, 타이머·알람이 없으면 메뉴바에 ⏱ 시간.
 - 영어 사전은 `ClockySettings.swift` 안 `enum Localization`. 시험에서 언어를 바꿀 때는 `EppLanguage.isKorean = false`.
 
 ## Grabby (Modules/Grabby) = 캡처

@@ -80,3 +80,30 @@ import Testing
         #expect(again.alarms.first { $0.id == copy }?.note == "  약 먹고 물 마시기 \n", "복제해도 메모가 따라간다")
     }
 }
+
+@Suite(.serialized) struct StopwatchTests {
+    @Test func 스톱워치는_멈췄다_이어서_재고_랩을_남기고_다시_켜도_이어진다() throws {
+        let name = "ClockyStopwatchTests-\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: name)!
+        defer { defaults.removePersistentDomain(forName: name) }
+        let store = ClockStore(defaults: defaults)
+        #expect(!store.stopwatchInUse && store.stopwatchElapsed() == 0)
+        store.startStopwatch()
+        Thread.sleep(forTimeInterval: 0.2)
+        store.lapStopwatch()
+        store.pauseStopwatch()
+        let paused = store.stopwatchElapsed()
+        #expect(paused >= 0.2 && store.laps.count == 1 && !store.stopwatchRunning)
+        Thread.sleep(forTimeInterval: 0.1)
+        #expect(store.stopwatchElapsed() == paused, "멈춘 동안은 늘지 않는다")
+        store.lapStopwatch()
+        #expect(store.laps.count == 1, "멈춘 동안은 랩을 남기지 않는다")
+        store.startStopwatch()
+        let again = ClockStore(defaults: defaults)
+        #expect(again.stopwatchRunning && again.stopwatchElapsed() >= paused && again.laps.count == 1, "다시 켜도 이어서 잰다")
+        again.resetStopwatch()
+        #expect(!again.stopwatchInUse && again.laps.isEmpty)
+        again.mode = .stopwatch
+        #expect(again.displayedUnits == [0, 0, 0])
+    }
+}
