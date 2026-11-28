@@ -1,4 +1,5 @@
 import AppKit
+import ServiceManagement
 import EppKit
 import UserNotifications
 
@@ -55,6 +56,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, UNUser
         EppLog.path = NSHomeDirectory() + "/Library/Logs/\(ModuleManager.folderName).log"
         EppLog.clear()
         EppLog.write("Epp", "launch \(Bundle.main.bundlePath) version=\(Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") ?? "-") features=\(manager.enabledIDs)")
+        // 시험용 Epp Dev는 로그인할 때 켜지지 않게 한다. 실제 Epp와 같이 켜지면 메뉴바 정리(Peeky)가 둘이 되어 아이콘을 서로 옮긴다.
+        if Bundle.main.bundleIdentifier?.hasSuffix(".dev") == true, SMAppService.mainApp.status == .enabled {
+            try? SMAppService.mainApp.unregister()
+            EppLog.write("Epp", "Epp Dev 로그인 항목을 풀었음")
+        }
         // 알림은 앱마다 처리기가 하나라 본체가 받아 보낸 기능에게 넘긴다.
         if EppNotifications.isAvailable { UNUserNotificationCenter.current().delegate = self }
 

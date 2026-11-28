@@ -118,9 +118,12 @@ final class Preferences: ObservableObject {
     init(defaults: UserDefaults) {
         self.defaults = defaults
         let savedGroups = (defaults.data(forKey: "groups")).flatMap { try? JSONDecoder().decode([ItemGroup].self, from: $0) } ?? []
-        groups = savedGroups.isEmpty
+        let startGroups = savedGroups.isEmpty
             ? [ItemGroup(id: UUID(), name: L("기본"), symbol: ItemGroup.symbols[0])]
             : savedGroups
+        groups = startGroups
+        // 처음 만든 기본 그룹도 저장한다. 안 하면 켤 때마다 새 그룹(새 id)이 생겨 메뉴바 자리 기록이 쌓인다.
+        if savedGroups.isEmpty { defaults.set(try? JSONEncoder().encode(startGroups), forKey: "groups") }
         assignments = (defaults.data(forKey: "assignments"))
             .flatMap { try? JSONDecoder().decode([String: UUID].self, from: $0) } ?? [:]
         excludedIDs = Set(defaults.stringArray(forKey: "excludedIDs") ?? [])

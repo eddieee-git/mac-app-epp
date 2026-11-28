@@ -62,6 +62,14 @@ public final class PeekyModule: EppModule {
                 DispatchQueue.main.async { if let self, self.isRunning { self.syncGroups(self.prefs.groups) } }
             }
             .store(in: &cancellables)
+        // 그룹 아이콘은 그 그룹에 넣은 아이콘이 있을 때만 메뉴바에 둔다. 배정이나 메뉴바 아이콘이 바뀌면 다시 본다.
+        Publishers.Merge4(prefs.$assignments.map { _ in () }, prefs.$excludedIDs.map { _ in () },
+                          prefs.$hiddenOnlyIDs.map { _ in () }, ItemStore.shared.$items.map { _ in () })
+            .dropFirst(4)
+            .sink { [weak self] _ in
+                DispatchQueue.main.async { if let self, self.isRunning { self.syncGroups(self.prefs.groups) } }
+            }
+            .store(in: &cancellables)
         // 접을 때 Peeky 그룹 아이콘과 Epp 아이콘은 밀려나면 안 된다.
         hider.protectedItems = { [weak self] in
             guard let self else { return [] }
@@ -502,16 +510,26 @@ public final class PeekyModule: EppModule {
         }
     }
 
+    /// 지금 메뉴바에 있는 아이콘 중 하나라도 들어 있는 그룹
+    private func groupsInUse() -> Set<UUID> {
+        Set(ItemStore.shared.items.compactMap { item -> UUID? in
+            if case .group(let id) = prefs.placement(for: item.id) { return id }
+            return nil
+        })
+    }
+
     private func syncGroups(_ groups: [ItemGroup]) {
         guard isRunning else { return }
-        let ids = Set(groups.map(\.id))
+        // 아이콘을 넣은 그룹만 메뉴바에 보인다. 빈 그룹 아이콘은 띄우지 않는다.
+        let inUse = groupsInUse()
+        let ids = Set(groups.map(\.id)).intersection(inUse)
         for (id, item) in statusItems where !ids.contains(id) {
             NSStatusBar.system.removeStatusItem(item)
             statusItems[id] = nil
             if taskbar.groupID == id { taskbar.hide() }
         }
 
-        for (index, group) in groups.enumerated() {
+        for (index, group) in groups.enumerated() where inUse.contains(group.id) {
             let item = statusItems[group.id] ?? {
                 let name = "PeekyGroup-\(group.id.uuidString)"
                 StatusItemPlacement.prepare(autosaveName: name, position: StatusItemPlacement.groupPosition(index: index))
